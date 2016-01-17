@@ -1,0 +1,313 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1251" />
+<link rel="stylesheet" href="style.css">
+<script src="calendar_ru.js" type="text/javascript"></script>
+<script src="let.min.js" type="text/javascript"></script>
+<script src="scripts.js" type="text/javascript"></script>
+<script src="captions.js" type="text/javascript"></script>
+<script>
+	var intervSens, idSensor=-1;
+	function SensGo(){
+		if (idSensor>=0){
+			if (document.getElementById("sensor_"+idSensor+"_test").value === "Test"){
+				clearInterval(intervalSens);
+				SendSTOP();
+			}
+			var sens_frame = document.getElementById("frame_sen_"+idSensor+"_data");
+			sens_frame.src = "sensor"+idSensor+"_data.html";
+		}
+	}
+
+	function onSensStart(sensNum){
+		if ((sensNum>=0) && (sensNum<=3)){
+			if ((idSensor>=0) && (sensNum != idSensor)){						//Выключить предыдущий тест
+				clearInterval(intervSens);
+				if (document.getElementById("sensor_"+idSensor+"_test").value === "Stop"){
+					document.getElementById("sensor_"+idSensor+"_test").value = "Test";
+					SendSTOP();
+				}
+			}
+			if (document.getElementById("sensor_"+sensNum+"_test").value === "Test"){ //Включить тест
+				document.getElementById("sensor_"+sensNum+"_test").value = "Stop";
+				intervSens = setInterval(SensGo, 500);
+				idSensor = sensNum;
+				goTest("sensor_"+sensNum+"_adr","sensor_"+sensNum+"_test");
+			}
+			else{																//Выключить тест
+				document.getElementById("sensor_"+sensNum+"_test").value = "Test";
+				idSensor = -1;
+				clearInterval(intervSens);
+				SendSTOP();
+			}
+		}
+	}
+	</script>
+<style>
+.s15
+{
+	font-size:15px;
+}
+.b
+{
+	font-weight:bold;
+}
+.sp_30
+{
+	width:10px;
+	height:30px;
+}
+.label_white
+{
+	font:Arial, Helvetica, sans-serif;
+	color:white;
+	font-size:13px;
+	font-style:bold;
+}
+.cl
+{
+	clear:left;
+}
+.sp_10
+{
+	width:10px;
+	height:10px;
+}
+.btn
+{
+	width:80px;
+	height:27px;
+	border-style:none;
+	border-radius:3px 3px 3px 3px;
+	font-size:14px;
+	color:#0163AC;
+	cursor:pointer;
+}
+.sensor_label{
+	width:30px;
+	height:20px;
+}
+.date_field{
+	width: 80px;
+	height: 20px;
+}
+.form_container {
+	height:32px;
+}
+.table
+{
+	table-layout:fixed;
+	width:100%;
+}
+.col_pos
+{
+	text-align:center;
+	width:65px;
+}
+.col_name
+{
+	text-align:center;
+	width:30px;
+}
+.col_adr
+{
+	text-align:center;
+	width:80px;
+}
+.col_state
+{
+	text-align:center;
+	width:80px;
+}
+.col_save
+{
+	text-align:center;
+	width:80px;
+}
+.col_data
+{
+	text-align:center;
+	width:48px;
+}
+.col_check
+{
+	text-align:center;
+	width:100px;
+}
+</style>
+</head>
+<body onLoad="letCaption()" class="in_body">
+<div class="div_c" style="font-family:Arial">
+	<div>
+        <table class="table">
+          <tr>
+            <td class="col_pos"><font class="label_white" id="sensNumber"></font></td>
+            <td class="col_name"><font class="label_white" id="sensName"></font></td>
+            <td class="col_adr"><font class="label_white" id="sensAdr"></font></td>
+            <td class="col_state"><font class="label_white" id="sensState"></font></td>
+            <td class="col_save">&nbsp;</td>
+            <td class="col_data"><font class="label_white">
+            <div align="center" id="sensCurrent"></div></td>
+            <td class="col_check">&nbsp;</td>
+          </tr>
+        </table>
+		<div class="line"></div>
+        <div class="form_container">
+            <form name= "form_sensor_0_setting" method="post" action="">
+                <table class="table">
+                  <tr>
+                    <td class="col_pos"><font class="label">1</font></td>
+                    <td class="col_name"><input type="text" class="sensor_label" data-let-length="3" id="sensor_0_name" value="~sensor_0_name~" name="sensor_0_name"/></td>
+                    <td class="col_adr">
+                        <div class="tr">
+                            <select name="sensor_0_adr" id="sensor_0_adr" class="date_field">
+                                <option value="0">0</option>
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                                <option value="5">5</option>
+                                <option value="6">6 (1-ware)</option>
+                                <option value="7">7 (I2C)</option>
+                            </select>
+                        </div>
+                    </td>
+                    <td	class="col_state">
+                        <div class="lab_4">
+                            <select name="sensor_0_on" id="sensor_0_on" class="date_field">
+                                <option value="0" id="mainOptOff"></option>
+                                <option value="1" id="mainOptOn"></option>
+                            </select>
+                        </div>
+                    </td>
+                    <td class="col_save">
+                        <div class="lab_4">
+                            <input name="sensor_0_save" type="submit" class="btn" onClick="" value="Save"/>
+                        </div>
+                    </td>
+                    <td class="col_data">
+	          			<iframe marginheight=3 width="48px" height="25px" id="frame_sen_0_data" style="border-style:none" scrolling="no" align="left" src="sensor0_data.html"></iframe>
+                    </td>
+                    <td class="col_check">
+                        <input name="sensor_0_test" id="sensor_0_test" type="button" class="btn" onClick="onSensStart(0)" value="Test"/>
+                    </td>
+                  </tr>
+                </table>
+            </form>
+        </div>
+		<div class="line"></div>
+        <div class="form_container">
+            <form name= "form_sensor_1_setting" method="post" action="">
+                <table class="table">
+                  <tr>
+                    <td class="col_pos"><font class="label">2</font></td>
+                    <td class="col_name"><input type="text" class="sensor_label" data-let-length="3" value="~sensor_1_name~" name="sensor_1_name"/></td>
+                    <td class="col_adr">
+                        <div class="tr">
+                            <select name="sensor_1_adr" id="sensor_1_adr" class="date_field">
+                                <option value="0">0</option>
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                                <option value="5">5</option>
+                                <option value="6">6 (1-ware)</option>
+                                <option value="7">7 (I2C)</option>
+                            </select>
+                        </div>
+                    </td>
+                    <td	class="col_state">
+                        <div class="lab_4">
+                            <select name="sensor_1_on" id="sensor_1_on" class="date_field">
+                                <option value="0" id="mainOptOff"></option>
+                                <option value="1" id="mainOptOn"></option>
+                            </select>
+                        </div>
+                    </td>
+                    <td class="col_save">
+                        <div class="lab_4">
+                            <input name="sensor_1_save" type="submit" class="btn" onClick="" value="Save"/>
+                        </div>
+                    </td>
+                    <td class="col_data">
+	          			<iframe marginheight=3 width="48px" height="25px" id="frame_sen_1_data" style="border-style:none" scrolling="no" align="left" src="sensor1_data.html"></iframe>
+                    </td>
+                    <td class="col_check">
+                        <input name="sensor_1_test" id="sensor_1_test" type="button" class="btn" onClick="onSensStart(1)" value="Test"/>
+                    </td>
+                  </tr>
+                </table>
+            </form>
+        </div>
+		<div class="line"></div>
+        <div class="form_container">
+            <form name= "form_sensor_2_setting" method="post" action="">
+                <table class="table">
+                  <tr>
+                    <td class="col_pos"><font class="label">3</font></td>
+                    <td class="col_name"><input type="text" class="sensor_label" data-let-length="3" value="~sensor_2_name~" name="sensor_2_name"/></td>
+                    <td class="col_adr">
+                        <div class="tr">
+                            <select name="sensor_2_adr" id="sensor_2_adr" class="date_field">
+                                <option value="0">0</option>
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                                <option value="5">5</option>
+                                <option value="6">6 (1-ware)</option>
+                                <option value="7">7 (I2C)</option>
+                            </select>
+                        </div>
+                    </td>
+                    <td	class="col_state">
+                        <div class="lab_4">
+                            <select name="sensor_2_on" id="sensor_2_on" class="date_field">
+                                <option value="0" id="mainOptOff"></option>
+                                <option value="1" id="mainOptOn"></option>
+                            </select>
+                        </div>
+                    </td>
+                    <td class="col_save">
+                        <div class="lab_4">
+                            <input name="sensor_2_save" type="submit" class="btn" onClick="" value="Save"/>
+                        </div>
+                    </td>
+                    <td class="col_data">
+	          			<iframe marginheight=3 width="48px" height="25px" id="frame_sen_2_data" style="border-style:none" scrolling="no" align="left" src="sensor2_data.html"></iframe>
+                    </td>
+                    <td class="col_check">
+                        <input name="sensor_2_test" id="sensor_2_test" type="button" class="btn" onClick="onSensStart(2)" value="Test"/>
+                    </td>
+                  </tr>
+                </table>
+            </form>
+		</div>
+    </div>
+    <div class="lab_4">
+        <br>
+        <span id="sensTransc"></span><br>
+        NS (no sensor) - <span id="sensNSNote"></span><br>
+        BL (battery low) - <span id="sensBLNote"></span><br>
+        NR (not radio) - <span id="ensNRNote"></span><br>
+    </div>
+</div>
+	<script type="text/javascript">
+		var cfg = {
+            sensor_0_adr:"~sensor_0_adr~",
+            sensor_0_on:"~sensor_0_on~"
+		}
+		setFormValues(document.forms[0], cfg);
+		var cfg1 = {
+            sensor_1_adr:"~sensor_1_adr~",
+            sensor_1_on:"~sensor_1_on~"
+		}
+		setFormValues(document.forms[1], cfg1);
+		var cfg2 = {
+            sensor_2_adr:"~sensor_2_adr~",
+            sensor_2_on:"~sensor_2_on~"
+		}
+		setFormValues(document.forms[2], cfg2);
+		</script>
+</body>
+</html>

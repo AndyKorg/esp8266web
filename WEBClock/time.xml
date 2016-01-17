@@ -1,0 +1,8 @@
+<response>
+	<time>
+		<value>~watch_hour~:~watch_minute~:~watch_second~</value>
+	</time>
+	<date>
+		<value>~watch_date~-~watch_month~-20~watch_year~</value>
+	</date>
+</response>

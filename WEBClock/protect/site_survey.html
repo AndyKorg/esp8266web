@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html><head>
+	<meta http-equiv="Content-type" content="text/html"; charset="windows-1251">
+	<script language="JavaScript" type="text/javascript">
+		var dotCount = 0;
+		function getValueFormXML(nodeXML){
+			var ret;	//for Chrome
+			if (nodeXML){
+				var ret = nodeXML[0].innerHTML;	//for Chrome
+				if (!ret){
+					ret = nodeXML[0].firstChild.nodeValue;		//for IE
+				}
+			}
+			return (ret);
+		}
+		
+		function ScanStart(){
+			if(window.XMLHttpRequest){
+				var scanXML = new XMLHttpRequest();
+				scanXML.open("GET", "scan.xml", false);
+				scanXML.send("");
+			}
+			else if(window.ActiveXObject){
+					scanXML = new ActiveXObject("Microsoft.XMLDOM");
+					scanXML.async = false;
+					scanXML.load("scan.xml");
+			}
+			else{
+				alert("Загрузка XML не поддерживается браузером");
+				return null;
+			}
+			document.getElementById("scanGoingId").disabled = false;
+			
+			var resp = scanXML.responseXML.getElementsByTagName("response");
+			if (resp){
+				var total = getValueFormXML(resp[0].getElementsByTagName("total"));
+				if (total){
+					if (total === "0"){
+						document.getElementById("scanResult").innerHTML 
+						var dotString = ".";
+						for (i=0;i<dotCount;i++){
+							dotString += ".";
+						}
+						document.getElementById("dot").innerHTML = dotString;
+						dotCount++;
+						if (dotCount == 7)
+							dotCount = 0;
+						setTimeout(ScanStart, 500);
+					}
+					else{
+						document.location.assign();
+						dotCount = 0;
+					}
+				}
+			}
+		}
+	</script>
+</head>
+<body onload="ScanStart()">
+    <form method="post">
+	    Идет сканирование<span id="dot"></span><br>
+ 		<input type="button" value="Остановить" onclick="StopScan()"/>
+	</form>
+</body>
+</html>

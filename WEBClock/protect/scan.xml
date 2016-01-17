@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="windows-1251"?>
+<?xml-stylesheet type='text/xsl' href='scan.xsl'?>
+<response>
+<total>4</total>
+<ap id="0">
+<ch>1</ch>
+<au>4</au>
+<bs>xx:xx:xx:xx:xx:xx</bs>
+<ss>mxxxxxxxx6</ss>
+<rs>-26</rs>
+<hd>0</hd>
+</ap>
+<ap id="1">
+<ch>2</ch>
+<au>4</au>
+<bs>xx:xx:xx:xx:xx:xx</bs>
+<ss>InterZetxxxxx</ss>
+<rs>-48</rs>
+<hd>0</hd>
+</ap>
+<ap id="2">
+<ch>11</ch>
+<au>2</au>
+<bs>78:54:xx:xx:xx:xx</bs>
+<ss>DSL-2640U</ss>
+<rs>-84</rs>
+<hd>0</hd>
+</ap>
+<ap id="3">
+<ch>12</ch>
+<au>3</au>
+<bs>c4:04:xx:xx:xx:xx</bs>
+<ss>HP-Print-bd-LaserJet 200</ss>
+<rs>-83</rs>
+<hd>0</hd>
+</ap>
+</response>

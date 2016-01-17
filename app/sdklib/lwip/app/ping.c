@@ -61,6 +61,9 @@
 
 #include "lwip/app/ping.h"
 
+#include "../../../../include/sdk/add_func.h"
+#include "../../../../include/user_interface.h"
+
 #if PING_USE_SOCKETS
 #include "lwip/sockets.h"
 #include "lwip/inet.h"
@@ -113,6 +116,7 @@ ping_prepare_echo( struct icmp_echo_hdr *iecho, u16_t len)
   iecho->chksum = inet_chksum(iecho, len);
 }
 
+/*
 static void ICACHE_FLASH_ATTR
 ping_prepare_er(struct icmp_echo_hdr *iecho, u16_t len)
 {
@@ -123,6 +127,7 @@ ping_prepare_er(struct icmp_echo_hdr *iecho, u16_t len)
 
 	iecho->chksum = inet_chksum(iecho, len);
 }
+*/
 
 /* Ping using the raw ip */
 static u8_t ICACHE_FLASH_ATTR

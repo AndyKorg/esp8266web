@@ -1,0 +1,180 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<script type="text/javascript">
+/*<%
+CONFIG_VAR(cover_mid, CFG_PMID);
+CONFIG_VAR(cover_ver, CFG_PVER);
+CONFIG_VAR(cover_wmode, CFG_WMODE);
+CONFIG_VAR(cover_ap_ssid, CFG_WASSID);
+CONFIG_VAR(cover_ap_ip, CFG_WAIP);
+CONFIG_VAR(cover_ap_mac, CFG_WAMAC);
+CONFIG_VAR(cover_sta_ssid, CFG_WSSSID);
+CONFIG_VAR(cover_sta_rssi, CFG_WSRSSI);
+CONFIG_VAR(cover_sta_ip, CFG_WSIP);
+CONFIG_VAR(cover_sta_mac, CFG_WSMAC);
+%>*/
+function init()
+{
+	document.form_wmode.wmode.value=wifi_mode;
+}
+function init_main_page()
+{
+	document.getElementById("cover_mid").innerHTML='~ntp.ip~';
+	document.getElementById("cover_ver").innerHTML=cover_ver;
+	document.getElementById("cover_wmode").innerHTML=cover_wmode;
+	if(cover_wmode != "STA")
+	{
+		document.getElementById("cover_ap_ssid").innerHTML=cover_ap_ssid;
+		document.getElementById("cover_ap_ip").innerHTML=cover_ap_ip;
+		document.getElementById("cover_ap_mac").innerHTML=cover_ap_mac;
+	}
+	if(cover_wmode != "AP")
+	{
+		document.getElementById("cover_sta_ssid").innerHTML=cover_sta_ssid;
+		document.getElementById("cover_sta_rssi").innerHTML=cover_sta_rssi;
+		document.getElementById("cover_sta_ip").innerHTML=cover_sta_ip;
+		document.getElementById("cover_sta_mac").innerHTML=cover_sta_mac;
+	}
+}
+	</script>
+<style>
+.div_c
+{
+	margin-left:50px;
+	margin-right:50px;
+	margin-top:50px;
+	margin-bottom:50px;
+}
+.lab_5
+{
+	font-size:15px;
+	color:White;
+	margin-left:-10px;
+}
+.cu_b
+{
+	cursor:pointer;
+	font-weight:bold;
+}
+.sp_5
+{
+	width:10px;
+	height:5px;
+}
+.label
+{
+	float:left;
+	width:50%;
+	color:white;
+	margin-bottom:-2px;
+	font-size:13px;
+}
+.lab_r
+{
+	float:left;
+	width:50%;
+	color:white;
+	text-align:right;
+	font-size:13px;
+}
+.cl
+{
+	clear:left;
+}
+.line
+{
+	height:1px;
+	background-color:white;
+	width:100%;
+	margin-top:5px;
+	margin-bottom:5px;
+	overflow:hidden;
+}
+.lab_l
+{
+	float:left;
+	width:40%;
+	color:white;
+	margin-bottom:-2px;
+	margin-left:10%;
+	font-size:13px;
+}
+.line_l
+{
+	height:1px;
+	background-color:white;
+	width:450px;
+	margin-top:5px;
+	margin-bottom:5px;
+	margin-left:50px;
+	overflow:hidden;
+}
+.in_body
+{
+	margin-top:0px;
+	margin-left:0px;
+	margin-right:0px;
+	margin-bottom:0px;
+	background-color:transparent;
+}
+</style>
+</head>
+<body class="in_body" onload="init_main_page()">
+    <div class="div_c" style="font-family:Arial">
+        <div class="lab_5 cu_b" onclick="upfold(2);child_getH();"><font id="up_2"></font></div>
+                <div class="sp_5"></div>
+                <div id="up_2_div">
+                <div class="label">MID</div>
+                <div class="lab_r" id="cover_mid"></div>
+                <div class="cl"></div>
+                <div class="line"></div>
+                <div class="label">Software Version</div>
+                <div class="lab_r" id="cover_ver"></div>
+                <div class="cl"></div>
+                <div class="line"></div>
+                <div class="label">WiFi Work Mode</div>
+                <div class="lab_r" id="cover_wmode"></div>
+                <div class="cl"></div>
+                <div class="line"></div>
+                <div class="label">AP mode</div>
+                <div class="lab_r"></div>
+                <div class="cl"></div>
+                <div class="line"></div>
+                <div class="lab_l">SSID</div>
+                <div class="lab_r" id="cover_ap_ssid"></div>
+                <div class="cl"></div>
+                <div class="line_l"></div>
+                <div class="lab_l">IP Address</div>
+                <div class="lab_r" id="cover_ap_ip"></div>
+                <div class="cl"></div>
+                <div class="line_l"></div>
+                <div class="lab_l">MAC Address</div>
+                <div class="lab_r" id="cover_ap_mac"></div>
+                <div class="cl"></div>
+                <div class="line_l"></div>
+                <div class="label">STA Mode</div>
+                <div class="lab_r"></div>
+                <div class="cl"></div>
+                <div class="line"></div>
+                <div class="lab_l">Router SSID</div>
+                <div class="lab_r" id="cover_sta_ssid"></div>
+                <div class="cl"></div>
+                <div class="line_l"></div>
+                <div class="lab_l">Signal Strength</div>
+                <div class="lab_r" id="cover_sta_rssi"></div>
+                <div class="cl"></div>
+                <div class="line_l"></div>
+                <div class="lab_l">IP Address</div>
+                <div class="lab_r" id="cover_sta_ip"></div>
+                <div class="cl"></div>
+                <div class="line_l"></div>
+                <div class="lab_l">MAC Address</div>
+                <div class="lab_r" id="cover_sta_mac"></div>
+                <div class="cl"></div>
+                <div class="line_l"></div>
+                </div>
+    </div>
+</body>
+</html>

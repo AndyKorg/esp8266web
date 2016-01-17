@@ -1,0 +1,641 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1251" />
+<script src="calendar_ru.js" type="text/javascript"></script>
+<script src="let.min.js" type="text/javascript"></script>
+<script src="scripts.js" type="text/javascript"></script>
+<script src="captions.js" type="text/javascript"></script>
+<script>
+/*	var height = 0;
+	function child_getH()
+	{
+		var nh = document.body.offsetHeight+200;
+		if(nh < 500)
+		{
+			nh = 500;
+		}
+		if(height != nh)
+		{
+			height = nh;
+			window.parent.child_height(height);
+		}
+	}*/
+	</script>
+<style>
+.div_c
+{
+	margin-left:50px;
+	margin-right:50px;
+	margin-top:50px;
+	margin-bottom:50px;
+}
+.in_body
+{
+	margin-top:0px;
+	margin-left:0px;
+	margin-right:0px;
+	margin-bottom:0px;
+	background-color:transparent;
+}
+.white
+{
+	color:White;
+}
+.s15
+{
+	font-size:15px;
+}
+.b
+{
+	font-weight:bold;
+}
+.sp_30
+{
+	width:10px;
+	height:30px;
+}
+.lab_4
+{
+	color:white;
+	font-size:13px;
+}
+.tr
+{
+	text-align:right;
+}
+.label
+{
+	float: left;
+	width: 10%;
+	color:white;
+	margin-bottom: -2px;
+	font-size: 13px;
+}
+.label_white
+{
+	font:Arial, Helvetica, sans-serif;
+	color:white;
+	font-size:13px;
+	font-style:bold;
+}
+.cl
+{
+	clear:left;
+}
+.line
+{
+	height: 1px;
+	background-color: white;
+	width: 100%;
+	margin-top: 1px;
+	margin-bottom: 1px;
+	overflow: hidden;
+}
+.sp_10
+{
+	width:10px;
+	height:10px;
+}
+.btn
+{
+	width:100px;
+	height:27px;
+	border-style:none;
+	border-radius:3px 3px 3px 3px;
+	font-size:14px;
+	color:#0163AC;
+	cursor:pointer;
+}
+.watch_label{
+	width:20px;
+	height:20px;
+}
+.date_field{
+	width: 80px;
+	height: 20px;
+}
+.form_container {
+	height:32px;
+}
+.table
+{
+	table-layout:fixed;
+	width:100%;
+	align:left;
+}
+.col_pos
+{
+	width:35px;
+	text-align:left;
+}
+.col_time
+{
+	width:65px;
+	text-align:center;
+}
+.col_day
+{
+	width:19px;
+	text-align:center;
+}
+.col_date{
+	width:157px;
+	text-align:center;
+}
+.col_durat
+{
+	width:30px;
+	text-align:center;
+}
+.col_state
+{
+	width:23px;
+	text-align:center;
+}
+.col_save
+{
+	max-width:50px;
+	text-align:right;
+}
+</style>
+</head>
+<body onLoad="letCaption()" class="in_body">
+<div class="div_c" style="font-family:Arial">
+	<div>
+		<font class="white s15 b" id="alrmWeekly"></font>
+      	<div class="cl"></div>
+        <table class="table">
+            <tr>
+                <td class="col_pos"><font class="label_white" id="alrmNumber"></font></td>
+                <td class="col_time"><font class="label_white" id="alrmTime"></font></td>
+                <td class="col_day"><font class="label_white" id="alrmMon"></font></td>
+                <td class="col_day"><font class="label_white" id="alrmTue"></font></td>
+                <td class="col_day"><font class="label_white" id="alrmWed"></font></td>
+                <td class="col_day"><font class="label_white" id="alrmThu"></font></td>
+                <td class="col_day"><font class="label_white" id="alrmFri"></font></td>
+                <td class="col_day"><font class="label_white" id="alrmSat"></font></td>
+                <td class="col_day"><font class="label_white" id="alrmSun"></font></td>
+                <td class="col_durat"><font class="label_white" id="alrmDurat"></font></td>
+                <td class="col_state"><font class="label_white" id="alrmStat"></font></td>
+                <td class="col_save">&nbsp;</td>
+            </tr>
+        </table>
+		<div class="line"></div>
+        <div class="form_container">
+            <form name= "form_alarm_0_setting" method="post" action="">
+                <table class="table">
+                    <tr class="tr">
+                        <td class="col_pos">
+                            <div class="label">0</div>
+                        </td>
+                        <td class="col_time">
+                            <input type="text" class="watch_label" data-let-input="/^[0-9]$/" data-let-template="/^[0-9](?!\d)|[0-1][0-9]|2[0-3]$/" data-let-length="2" value="~alarm_0_hour~" name="alarm_0_hour"/>
+                            <font color="white"><b>:</b></font>
+                            <input type="text" class="watch_label" data-let-input="/^[0-9]$/" data-let-template="/^[0-9](?!\d)|[0-5][0-9]$/" data-let-length="2" value="~alarm_0_minute~" name="alarm_0_minute"/>
+                        </td>
+                        <td class="col_day">
+                            <input type="hidden" name="alarm_0_1" value="0">
+                            <input type="checkbox" name="alarm_0_1" value="1">
+                        </td>
+                        <td class="col_day">
+                            <INPUT TYPE="hidden" NAME="alarm_0_2" VALUE="0">
+                            <INPUT TYPE="checkbox" NAME="alarm_0_2" VALUE="1">
+                        </td>
+                        <td class="col_day">
+                            <INPUT TYPE="hidden" NAME="alarm_0_3" VALUE="0">
+                            <INPUT TYPE="checkbox" NAME="alarm_0_3" VALUE="1">
+                        </td>
+                        <td class="col_day">
+                            <INPUT TYPE="hidden" NAME="alarm_0_4" VALUE="0">
+                            <INPUT TYPE="checkbox" NAME="alarm_0_4" VALUE="1">
+                        </td>
+                        <td class="col_day">
+                            <INPUT TYPE="hidden" NAME="alarm_0_5" VALUE="0">
+                            <INPUT TYPE="checkbox" NAME="alarm_0_5" VALUE="1">
+                        </td>
+                        <td class="col_day">
+                            <INPUT TYPE="hidden" NAME="alarm_0_6" VALUE="0">
+                            <INPUT TYPE="checkbox" NAME="alarm_0_6" VALUE="1">
+                        </td>
+                        <td class="col_day">
+                            <INPUT TYPE="hidden" NAME="alarm_0_7" VALUE="0">
+                            <INPUT TYPE="checkbox" NAME="alarm_0_7" VALUE="1">
+                        </td>
+                        <td class="col_durat">
+                            <input type="text" class="watch_label" data-let-input="/^[0-9]$/" data-let-template="/^[0-9](?!\d)|[0-2][0-9]|3[0-1]$/" data-let-length="2" value="~alarm_0_durat~" name="alarm_0_durat"/>
+                        </td>
+                        <td class="col_state">
+                            <select id ="alarm_0_on" name="alarm_0_on" class="date_field">
+                                <option value="0" id="mainOptOff"></option>
+                                <option value="1" id="mainOptOn"></option>
+                                </select>
+                        </td>
+                        <td class="col_save">
+                            <input name="alarm_0_save" type="submit" class="btn" onClick="" value="Save"/>
+                        </td>
+                    </tr>
+                </table> 
+            </form>
+        </div>
+        <div class="line"></div>
+        <div class="form_container">
+            <form name= "form_alarm_1_setting" method="post" action="">
+                <table class="table">
+                    <tr class="tr>">
+                        <td class="col_pos">
+                            <div class="label">1</div>
+                        </td>
+                        <td class="col_time">
+                            <input type="text" class="watch_label" data-let-input="/^[0-9]$/" data-let-template="/^[0-9](?!\d)|[0-1][0-9]|2[0-3]$/" data-let-length="2" value="~alarm_1_hour~" name="alarm_1_hour"/>
+                            <font color="white"><b>:</b></font>
+                            <input type="text" class="watch_label" data-let-input="/^[0-9]$/" data-let-template="/^[0-9](?!\d)|[0-5][0-9]$/" data-let-length="2" value="~alarm_1_minute~" name="alarm_1_minute"/>
+                        <td class="col_day">
+                            <INPUT TYPE="hidden" NAME="alarm_1_1" VALUE="0">
+                            <INPUT TYPE="checkbox" NAME="alarm_1_1" VALUE="1">
+                        </td>
+                        <td class="col_day">
+                            <INPUT TYPE="hidden" NAME="alarm_1_2" VALUE="0">
+                            <INPUT TYPE="checkbox" NAME="alarm_1_2" VALUE="1">
+                        </td>
+                        <td class="col_day">
+                            <INPUT TYPE="hidden" NAME="alarm_1_3" VALUE="0">
+                            <INPUT TYPE="checkbox" NAME="alarm_1_3" VALUE="1">
+                        </td>
+                        <td class="col_day">
+                            <INPUT TYPE="hidden" NAME="alarm_1_4" VALUE="0">
+                            <INPUT TYPE="checkbox" NAME="alarm_1_4" VALUE="1">
+                        </td>
+                        <td class="col_day">
+                            <INPUT TYPE="hidden" NAME="alarm_1_5" VALUE="0">
+                            <INPUT TYPE="checkbox" NAME="alarm_1_5" VALUE="1">
+                        </td>
+                        <td class="col_day">
+                            <INPUT TYPE="hidden" NAME="alarm_1_6" VALUE="0">
+                            <INPUT TYPE="checkbox" NAME="alarm_1_6" VALUE="1">
+                        </td>
+                        <td class="col_day">
+                            <INPUT TYPE="hidden" NAME="alarm_1_7" VALUE="0">
+                            <INPUT TYPE="checkbox" NAME="alarm_1_7" VALUE="1">
+                        </td>
+                        <td class="col_durat">
+                            <input type="text" class="watch_label" data-let-input="/^[0-9]$/" data-let-template="/^[0-9](?!\d)|[0-2][0-9]|3[0-1]$/" data-let-length="2" value="~alarm_1_durat~" name="alarm_1_durat"/>
+                        </td>
+                        <td class="col_state">
+                            <select id="alarm_1_on" name="alarm_1_on" class="date_field">
+                                <option value="0" id="mainOptOff"></option>
+                                <option value="1" id="mainOptOn"></option>
+                          </select>
+                        </td>
+                        <td class="col_save">
+                            <input name="alarm_1_save" type="submit" class="btn" onClick="" value="Save"/>
+                        </td>
+                    </tr>
+              </table>
+            </form>
+        </div>
+        <div class="line"></div>
+        <div class="form_container">
+            <form name= "form_alarm_2_setting" method="post" action="">
+                <table class="table">
+                    <tr class="tr>">
+                        <td class="col_pos">
+                            <div class="label">2</div>
+                        </td>
+                        <td class="col_time">
+                            <input type="text" class="watch_label" data-let-input="/^[0-9]$/" data-let-template="/^[0-9](?!\d)|[0-1][0-9]|2[0-3]$/" data-let-length="2" value="~alarm_2_hour~" name="alarm_2_hour"/>
+                            <font color="white"><b>:</b></font>
+                            <input type="text" class="watch_label" data-let-input="/^[0-9]$/" data-let-template="/^[0-9](?!\d)|[0-5][0-9]$/" data-let-length="2" value="~alarm_2_minute~" name="alarm_2_minute"/>
+                        </td>
+                        <td class="col_day">
+                            <INPUT TYPE="hidden" NAME="alarm_2_1" VALUE="0">
+                            <INPUT TYPE="checkbox" NAME="alarm_2_1" VALUE="1">
+                        </td>
+                        <td class="col_day">
+                            <INPUT TYPE="hidden" NAME="alarm_2_2" VALUE="0">
+                            <INPUT TYPE="checkbox" NAME="alarm_2_2" VALUE="1">
+                        </td>
+                        <td class="col_day">
+                            <INPUT TYPE="hidden" NAME="alarm_2_3" VALUE="0">
+                            <INPUT TYPE="checkbox" NAME="alarm_2_3" VALUE="1">
+                        </td>
+                        <td class="col_day">
+                            <INPUT TYPE="hidden" NAME="alarm_2_4" VALUE="0">
+                            <INPUT TYPE="checkbox" NAME="alarm_2_4" VALUE="1">
+                        </td>
+                        <td class="col_day">
+                            <INPUT TYPE="hidden" NAME="alarm_2_5" VALUE="0">
+                            <INPUT TYPE="checkbox" NAME="alarm_2_5" VALUE="1">
+                        </td>
+                        <td class="col_day">
+                            <INPUT TYPE="hidden" NAME="alarm_2_6" VALUE="0">
+                            <INPUT TYPE="checkbox" NAME="alarm_2_6" VALUE="1">
+                        </td>
+                        <td class="col_day">
+                            <INPUT TYPE="hidden" NAME="alarm_2_7" VALUE="0">
+                            <INPUT TYPE="checkbox" NAME="alarm_2_7" VALUE="1">
+                        </td>
+                        <td class="col_durat">
+                            <input type="text" class="watch_label" data-let-input="/^[0-9]$/" data-let-template="/^[0-9](?!\d)|[0-2][0-9]|3[0-1]$/" data-let-length="2" value="~alarm_2_durat~" name="alarm_2_durat"/>
+                        </td>
+                        <td class="col_state">
+                            <select id="alarm_2_on" name="alarm_2_on" class="date_field">
+                                <option value="0" id="mainOptOff"></option>
+                                <option value="1" id="mainOptOn"></option>
+                                </select>
+                        </td>
+                        <td class="col_save">
+                            <input name="alarm_2_save" type="submit" class="btn" onClick="" value="Save"/>
+                        </td>
+                    </tr>
+                </table>
+            </form>
+        </div>
+        <div class="line"></div>
+		<div class="form_container">
+            <form name= "form_alarm_3_setting" method="post" action="">
+                <table class="table">
+                    <tr class="tr>">
+                        <td class="col_pos">
+                            <div class="label">3</div>
+                        </td>
+                        <td class="col_time">
+                        	<input type="text" class="watch_label" data-let-input="/^[0-9]$/" data-let-template="/^[0-9](?!\d)|[0-1][0-9]|2[0-3]$/" data-let-length="2" value="~alarm_3_hour~" name="alarm_3_hour"/>
+                        	<font color="white"><b>:</b></font>
+                        	<input type="text" class="watch_label" data-let-input="/^[0-9]$/" data-let-template="/^[0-9](?!\d)|[0-5][0-9]$/" data-let-length="2" value="~alarm_3_minute~" name="alarm_3_minute"/>
+	                    </td>
+                        <td class="col_day">
+                            <INPUT TYPE="hidden" NAME="alarm_3_1" VALUE="0">
+                            <INPUT TYPE="checkbox" NAME="alarm_3_1" VALUE="1">
+                        </td>
+                        <td class="col_day">
+                            <INPUT TYPE="hidden" NAME="alarm_3_2" VALUE="0">
+                            <INPUT TYPE="checkbox" NAME="alarm_3_2" VALUE="1">
+                        </td>
+                        <td class="col_day">
+                            <INPUT TYPE="hidden" NAME="alarm_3_3" VALUE="0">
+                            <INPUT TYPE="checkbox" NAME="alarm_3_3" VALUE="1">
+                        </td>
+                        <td class="col_day">
+                            <INPUT TYPE="hidden" NAME="alarm_3_4" VALUE="0">
+                            <INPUT TYPE="checkbox" NAME="alarm_3_4" VALUE="1">
+                        </td>
+                        <td class="col_day">
+                            <INPUT TYPE="hidden" NAME="alarm_3_5" VALUE="0">
+                            <INPUT TYPE="checkbox" NAME="alarm_3_5" VALUE="1">
+                        </td>
+                        <td class="col_day">
+                            <INPUT TYPE="hidden" NAME="alarm_3_6" VALUE="0">
+                            <INPUT TYPE="checkbox" NAME="alarm_3_6" VALUE="1">
+                        </td>
+                        <td class="col_day">
+                            <INPUT TYPE="hidden" NAME="alarm_3_7" VALUE="0">
+                            <INPUT TYPE="checkbox" NAME="alarm_3_7" VALUE="1">
+                        </td>
+                        <td class="col_durat">
+                            <input type="text" class="watch_label" data-let-input="/^[0-9]$/" data-let-template="/^[0-9](?!\d)|[0-2][0-9]|3[0-1]$/" data-let-length="2" value="~alarm_3_durat~" name="alarm_3_durat"/>
+                        </td>
+    	                <td class="col_state">
+        	                <select id="alarm_3_on" name="alarm_3_on" class="date_field">
+                                <option value="0" id="mainOptOff"></option>
+                                <option value="1" id="mainOptOn"></option>
+                        	    </select>
+                    	</td>
+                    	<td class="col_save">
+	                        <input name="alarm_3_save" type="submit" class="btn" onClick="" value="Save"/>
+                        </td>
+                    </tr>
+                </table>
+            </form>
+        </div>
+		<font class="white s15 b" id="alrmByDate"></font>
+		<div class="line"></div>
+        <div class="form_container">
+            <form name= "form_alarm_4_setting" method="post" action="">
+                <table class="table">
+                    <tr class="tr>">
+                        <td class="col_pos">
+                            <div class="label">4</div>
+                        </td>
+                        <td class="col_time">
+                            <input type="text" class="watch_label" data-let-input="/^[0-9]$/" data-let-template="/^[0-9](?!\d)|[0-1][0-9]|2[0-3]$/" data-let-length="2" value="~alarm_4_hour~" name="alarm_4_hour"/>
+                            <font color="white"><b>:</b></font>
+                            <input type="text" class="watch_label" data-let-input="/^[0-9]$/" data-let-template="/^[0-9](?!\d)|[0-5][0-9]$/" data-let-length="2" value="~alarm_4_minute~" name="alarm_4_minute"/>
+                        </td>
+                        <td class="col_date">
+                            <input type="text" class="date_field" value="~alarm_4_date~-~alarm_4_month~-20~alarm_4_year~" onFocus="this.select();lcs(this)" onClick="event.cancelBubble=true;this.select();lcs(this)" name="alarm_4_date"> <!-- used calendar_ru.js -->
+                        </td>
+                        <td class="col_durat">
+                            <input type="text" class="watch_label" data-let-input="/^[0-9]$/" data-let-template="/^[0-9](?!\d)|[0-2][0-9]|3[0-1]$/" data-let-length="2" value="~alarm_4_durat~" name="alarm_4_durat"/>
+                        </td>
+                        <td class="col_state">
+                            <select id="alarm_4_on" name="alarm_4_on" class="date_field">
+                                <option value="0" id="mainOptOff"></option>
+                                <option value="1" id="mainOptOn"></option>
+                                </select>
+                        </td>
+                        <td class="col_save">
+                            <input name="alarm_4_save" type="submit" class="btn" onClick="" value="Save"/>
+                        </td>
+                    </tr>
+                </table>
+            </form>
+        </div>
+		<div class="line"></div>
+        <div class="form_container">
+            <form name= "form_alarm_5_setting" method="post" action="">
+                    <table class="table">
+                        <tr class="tr>">
+                            <td class="col_pos">
+                                <div class="label">5</div>
+                            </td>
+                            <td class="col_time">
+                                <input type="text" class="watch_label" data-let-input="/^[0-9]$/" data-let-template="/^[0-9](?!\d)|[0-1][0-9]|2[0-3]$/" data-let-length="2" value="~alarm_5_hour~" name="alarm_5_hour"/>
+                                <font class="white"><b>:</b></font>
+                                <input type="text" class="watch_label" data-let-input="/^[0-9]$/" data-let-template="/^[0-9](?!\d)|[0-5][0-9]$/" data-let-length="2" value="~alarm_5_minute~" name="alarm_5_minute"/>
+                            </td>
+                            <td class="col_date">
+                                <input type="text" class="date_field" value="~alarm_5_date~-~alarm_5_month~-20~alarm_5_year~" onFocus="this.select();lcs(this)" onClick="event.cancelBubble=true;this.select();lcs(this)" name="~alarm_5_date"> <!-- used calendar_ru.js -->
+                            </td>
+                            <td class="col_durat">
+                                <input type="text" class="watch_label" data-let-input="/^[0-9]$/" data-let-template="/^[0-9](?!\d)|[0-2][0-9]|3[0-1]$/" data-let-length="2" value="~alarm_5_durat~" name="alarm_5_durat"/>
+                            </td>
+                            <td class="col_state">
+                                <select id="alarm_5_on" name="alarm_5_on" class="date_field">
+                                    <option value="0" id="mainOptOff"></option>
+                                    <option value="1" id="mainOptOn"></option>
+                                    </select>
+                            </td>
+                            <td class="col_save">
+                                <input name="alarm_5_save" type="submit" class="btn" onClick="" value="Save"/>
+                            </td>
+                    </tr>
+                </table>
+            </form>
+        </div>
+		<div class="line"></div>
+        <div class="form_container">
+            <form name= "form_alarm_6_setting" method="post" action="">
+                <table class="table">
+                    <tr class="tr>">
+                        <td class="col_pos">
+                            <div class="label">6</div>
+                        </td>
+                        <td class="col_time">
+                            <input type="text" class="watch_label" data-let-input="/^[0-9]$/" data-let-template="/^[0-9](?!\d)|[0-1][0-9]|2[0-3]$/" data-let-length="2" value="~alarm_6_hour~" name="alarm_6_hour"/>
+                            <font color="white"><b>:</b></font>
+                            <input type="text" class="watch_label" data-let-input="/^[0-9]$/" data-let-template="/^[0-9](?!\d)|[0-5][0-9]$/" data-let-length="2" value="~alarm_6_minute~" name="alarm_6_minute"/>
+                        </td>
+                        <td class="col_date">
+                            <input type="text" class="date_field" value="~alarm_6_date~-~alarm_6_month~-20~alarm_6_year~" onFocus="this.select();lcs(this)" onClick="event.cancelBubble=true;this.select();lcs(this)" name="~alarm_6_date"> <!-- used calendar_ru.js -->
+                        </td>
+                        <td class="col_durat">
+                            <input type="text" class="watch_label" data-let-input="/^[0-9]$/" data-let-template="/^[0-9](?!\d)|[0-2][0-9]|3[0-1]$/" data-let-length="2" value="~alarm_6_durat~" name="alarm_6_durat"/>
+                        </td>
+                        <td class="col_state">
+                            <select id="alarm_6_on" name="alarm_6_on" class="date_field">
+                                <option value="0" id="mainOptOff"></option>
+                                <option value="1" id="mainOptOn"></option>
+                                </select>
+                        </td>
+                        <td class="col_save">
+                            <input name="alarm_6_save" type="submit" class="btn" onClick="" value="Save"/>
+                        </td>
+                    </tr>
+                </table>                               
+            </form>
+        </div>
+		<div class="line"></div>
+        <div class="form_container">
+            <form name= "form_alarm_7_setting" method="post" action="">
+                <table class="table">
+                    <tr class="tr>">
+                        <td class="col_pos">
+                            <div class="label">7</div>
+                        </td>
+                        <td class="col_time">
+                            <input type="text" class="watch_label" data-let-input="/^[0-9]$/" data-let-template="/^[0-9](?!\d)|[0-1][0-9]|2[0-3]$/" data-let-length="2" value="~alarm_7_hour~" name="alarm_7_hour"/>
+                            <font color="white"><b>:</b></font>
+                            <input type="text" class="watch_label" data-let-input="/^[0-9]$/" data-let-template="/^[0-9](?!\d)|[0-5][0-9]$/" data-let-length="2" value="~alarm_7_minute~" name="alarm_7_minute"/>
+                        </td>
+                        <td class="col_date">
+                            <input type="text" class="date_field" value="~alarm_7_date~-~alarm_7_month~-20~alarm_7_year~" onFocus="this.select();lcs(this)" onClick="event.cancelBubble=true;this.select();lcs(this)" name="~alarm_7_date"> <!-- used calendar_ru.js -->
+                        </td>
+                        <td class="col_durat">
+                            <input type="text" class="watch_label" data-let-input="/^[0-9]$/" data-let-template="/^[0-9](?!\d)|[0-2][0-9]|3[0-1]$/" data-let-length="2" value="~alarm_7_durat~" name="alarm_7_durat"/>
+                        </td>
+                        <td class="col_state">
+                            <select id="alarm_7_on" name="alarm_7_on" class="date_field">
+                                <option value="0" id="mainOptOff"></option>
+                                <option value="1" id="mainOptOn"></option>
+                                </select>
+                        </td>
+                        <td class="col_save">
+                            <input name="alarm_7_save" type="submit" class="btn" onClick="" value="Save"/>
+                        </td>
+                    </tr>
+                </table>
+            </form>
+        </div>
+		<div class="line"></div>
+		<div class="form_container">		
+            <form name= "form_alarm_8_setting" method="post" action="">
+                <table class="table">
+                    <tr class="tr>">
+                        <td class="col_pos">
+                            <div class="label">8</div>
+                        </td>
+                        <td class="col_time">
+	                        <input type="text" class="watch_label" data-let-input="/^[0-9]$/" data-let-template="/^[0-9](?!\d)|[0-1][0-9]|2[0-3]$/" data-let-length="2" value="~alarm_8_hour~" name="alarm_8_hour"/>
+	                        <font color="white"><b>:</b></font>
+	                        <input type="text" class="watch_label" data-let-input="/^[0-9]$/" data-let-template="/^[0-9](?!\d)|[0-5][0-9]$/" data-let-length="2" value="~alarm_8_minute~" name="alarm_8_minute"/>
+                        </td>
+                        <td class="col_date">
+	                        <input type="text" class="date_field" value="~alarm_8_date~-~alarm_8_month~-20~alarm_8_year~" onFocus="this.select();lcs(this)" onClick="event.cancelBubble=true;this.select();lcs(this)" name="~alarm_8_date"> <!-- used calendar_ru.js -->
+                        </td>
+                        <td class="col_durat">
+                            <input type="text" class="watch_label" data-let-input="/^[0-9]$/" data-let-template="/^[0-9](?!\d)|[0-2][0-9]|3[0-1]$/" data-let-length="2" value="~alarm_8_durat~" name="alarm_8_durat"/>
+                        </td>
+                        <td class="col_state">
+                            <select id="alarm_8_on" name="alarm_8_on" class="date_field">
+                                <option value="0" id="mainOptOff"></option>
+                                <option value="1" id="mainOptOn"></option>
+                                </select>
+                        </td>
+                        <td class="col_save">
+	                        <input name="alarm_8_save" type="submit" class="btn" onClick="" value="Save"/>
+                        </td>
+                    </tr>
+                </table>
+            </form>
+		</div>
+    </div>
+</div>
+	<script type="text/javascript">
+//		child_getH();
+		var cfg = {
+            alarm_0_1:"~alarm_0_1~",
+            alarm_0_2:"~alarm_0_2~",
+            alarm_0_3:"~alarm_0_3~",
+            alarm_0_4:"~alarm_0_4~",
+            alarm_0_5:"~alarm_0_5~",
+            alarm_0_6:"~alarm_0_6~",
+            alarm_0_7:"~alarm_0_7~",
+            alarm_0_on:"~alarm_0_on~"
+		}
+		setFormValues(document.forms[0], cfg);
+		var cfg1 = {
+            alarm_1_1:"~alarm_1_1~",
+            alarm_1_2:"~alarm_1_2~",
+            alarm_1_3:"~alarm_1_3~",
+            alarm_1_4:"~alarm_1_4~",
+            alarm_1_5:"~alarm_1_5~",
+            alarm_1_6:"~alarm_1_6~",
+            alarm_1_7:"~alarm_1_7~",
+            alarm_1_on:"~alarm_1_on~"
+		}
+		setFormValues(document.forms[1], cfg1);
+		var cfg2 = {
+            alarm_2_1:"~alarm_2_1~",
+            alarm_2_2:"~alarm_2_2~",
+            alarm_2_3:"~alarm_2_3~",
+            alarm_2_4:"~alarm_2_4~",
+            alarm_2_5:"~alarm_2_5~",
+            alarm_2_6:"~alarm_2_6~",
+            alarm_2_7:"~alarm_2_7~",
+            alarm_2_on:"~alarm_2_on~",
+		}
+		setFormValues(document.forms[2], cfg2);
+		var cfg3 = {
+            alarm_3_1:"~alarm_3_1~",
+            alarm_3_2:"~alarm_3_2~",
+            alarm_3_3:"~alarm_3_3~",
+            alarm_3_4:"~alarm_3_4~",
+            alarm_3_5:"~alarm_3_5~",
+            alarm_3_6:"~alarm_3_6~",
+            alarm_3_7:"~alarm_3_7~",
+            alarm_3_on:"~alarm_3_on~",
+		}
+		setFormValues(document.forms[3], cfg3);
+		var cfg4 = {
+            alarm_4_on:"~alarm_4_on~",
+		}
+		setFormValues(document.forms[4], cfg4);
+		var cfg5 = {
+            alarm_5_on:"~alarm_5_on~",
+		}
+		setFormValues(document.forms[5], cfg5);
+		var cfg6 = {
+            alarm_6_on:"~alarm_6_on~",
+		}
+		setFormValues(document.forms[6], cfg6);
+		var cfg7 = {
+            alarm_7_on:"~alarm_7_on~",
+		}
+		setFormValues(document.forms[7], cfg7);
+		var cfg8 = {
+            alarm_8_on:"~alarm_8_on~",
+		}
+		setFormValues(document.forms[8], cfg8);
+	</script>
+</body>
+</html>

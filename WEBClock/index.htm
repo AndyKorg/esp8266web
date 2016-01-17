@@ -1,0 +1,122 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<!-- use code page windovs-1251 because it is used to program the microcontroller device hours -->
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1251" />
+<title>Clock-matrix</title>
+<link rel="stylesheet" href="pure-min.css">
+    <script type="text/javascript">
+	function GetXMLRequest(url){
+		if(window.XMLHttpRequest){
+			var RetXML = new XMLHttpRequest();
+			RetXML.open("GET", url, false);
+			RetXML.send("");
+		}
+		else if(window.ActiveXObject){
+				RetXML = new ActiveXObject("Microsoft.XMLDOM");
+				RetXML.async = false;
+				RetXML.load(url);
+		}
+		else{
+			alert("Загрузка XML не поддерживается браузером");
+			return null;
+		}
+		return RetXML;
+	}
+	
+	function getXMLValue(xmlData, field) {
+		try {
+			xmlVal = xmlData.getElementsByTagName(field)[0];
+			if (xmlVal.getElementsByTagName("value")[0].firstChild.nodeValue)
+				return xmlVal.getElementsByTagName("value")[0].firstChild.nodeValue;
+			else
+				return null;
+		} catch (err) {
+			return null;
+		}
+	}
+	
+	function GetTime(){
+		xml = GetXMLRequest("time.xml");
+		if (xml){
+			document.getElementById("Time").innerHTML = getXMLValue(xml.responseXML, "time");
+			document.getElementById("Date").innerHTML = getXMLValue(xml.responseXML, "date");
+		}
+	}
+	
+	setInterval("GetTime()", 1000);
+	</script>
+
+<style>
+.base_div
+{
+	width: 600px;
+	text-align: center;
+	margin: 20px;
+}
+.shadow
+{
+	filter:progid:DXImageTransform.Microsoft.Shadow(color=#909090,direction=120,strength=4);/*ie*/
+	-moz-box-shadow: 2px 2px 10px #909090;/*firefox*/
+	-webkit-box-shadow: 2px 2px 10px #909090;/*safarichrome*/
+	box-shadow:2px 2px 10px #909090;/*operaie9*/
+}
+.back_div
+{
+	width:600px;
+	background:scroll center center;
+	background-color:#006699;
+	margin-top:10px;
+	border-radius:20px 20px 20px 20px;
+}
+.bot_txt
+{
+	font-family:Arial;
+	font-size:14px;
+	text-align:center;
+	color:#757475;
+}
+.label
+{
+	color: White;
+	font-size: 13px;
+	text-align: center;
+}
+.button-success {
+	color: #757475;
+	border-radius: 8px;
+	text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+/*	background: rgb(28, 184, 65); /* это зелёный */
+	background: rgb(#E0, #f5, #75);
+	font-size:150%;
+}
+</style>
+</head>
+<body style="background-color:#F5F5F5" onload="GetTime()">
+	<div class="base_div">
+    	~clock_name~
+	    <div class="shadow back_div">
+    	    <div style="border-style: none; width: 100%; height: 500px; border-spacing: 0px;">
+            	<div class="label">
+        			<div style="height:40px"></div>
+                    <h1>
+                        <div id="mainCurrentTime"></div><br/>
+                        <span id="Time"></span>
+                        <br />
+                        <span id="Date"></span>
+                    </h1>
+        			<div style="height:40px"></div>
+                    <a href="protect/index.htm">
+						<button class="pure-button button-success">Control</button>
+                    </a>
+                </div>
+        	</div>
+    	</div>
+        <div class="cl"></div>
+        <div style="width:10px;height:20px"></div>
+        <div class="bot_txt">
+            system: ~sys_sysver~ web server:~sys_webver~ clock server: ~clock_ver~
+        </div>
+	</div>
+</body>
+</html>

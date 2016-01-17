@@ -41,6 +41,8 @@
 #endif
 
 #ifdef USE_WEB
+#include "include/clock_web.h"
+#include "../include/customer_uart.h"
 extern void web_fini(const uint8 * fname);
 static const uint8 inifname[] ICACHE_RODATA_ATTR = "protect/init.ini";
 #endif
@@ -59,6 +61,8 @@ void ICACHE_FLASH_ATTR init_done_cb(void)
 		New_WiFi_config(WIFI_MASK_ALL);
 		break;
 	}
+	ClockUartInit();
+	ClockWebInit();
 }
 
 /******************************************************************************
@@ -69,7 +73,8 @@ void ICACHE_FLASH_ATTR init_done_cb(void)
  *******************************************************************************/
 void ICACHE_FLASH_ATTR user_init(void) {
 	sys_read_cfg();
-	if(!syscfg.cfg.b.debug_print_enable) system_set_os_print(0);
+	if(!syscfg.cfg.b.debug_print_enable)
+		system_set_os_print(0);
 	uart_init();
 	GPIO0_MUX = VAL_MUX_GPIO0_SDK_DEF;
 	GPIO4_MUX = VAL_MUX_GPIO4_SDK_DEF;

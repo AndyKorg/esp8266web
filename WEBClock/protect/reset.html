@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html><head>
+	<meta http-equiv="Content-type" content="text/html; charset=windows-1251">
+	<link rel="stylesheet" href="style.css">
+    <script src="captions.js" type="text/javascript"></script>
+</head>
+<body onload="letCaption()" class="in_body">
+    <div class="div_c" style="font-family:Arial">
+        <form name= "form_reload" method="post" action="success.html">
+			<input type=hidden name="sys_reset" value=1>
+            <div style="height:400px">
+                <div class="lab_4">
+	                <font size="+1">
+                        <span id="rstTitle"></span>
+                        <br />
+                        <br />
+                        <div class="line"></div>
+                        <span id="rstStr1"></span>
+                        <br />
+                        <span id="rstStr2"></span>
+                        <br />
+                    	<div class="line"></div>
+                        <br />
+	                </font>
+                </div>
+                <div class="lab_4" align="right">
+                    <input onclick="submit()" type="button" class="btn r20" value="OK"/>
+                    <input type="button" class="btn" value="Back" onclick="window.parent.child_cn(1)"/>
+                </div>
+            </div>
+		</form>
+    </div>
+</body>
+</html>

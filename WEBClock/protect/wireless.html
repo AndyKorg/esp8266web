@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html><head>
+	<meta http-equiv="Content-type" content="text/html"; charset="windows-1251">
+	<title>ESP8266 STA Settings</title>
+	<link rel="stylesheet" href="style.css">
+	<script src="scripts.js"></script>
+    <script src="captions.js"></script>
+</head>
+<body onLoad="letCaption()" class="in_body">
+	<div class="div_c">
+		<form method="get" action="site_survey.html">
+			<div class="lab_4">
+                <div class="tr">
+<!-- Не тестировалось        			<input type='hidden' name='wifi_scan' value="1">
+        			<input type='submit' value='Scan' class="btn"> -->
+                </div>
+            </div>
+        </form>
+		<form method='post' action='timeout.htm?time=5&label="reconnect wifi"'>
+			<div class="lab_4">
+                <div class="line"></div>
+            	<div class="label" id="stNetName"></div>
+                <div class="tr">
+					<input type='hidden' name='wifi_rdcfg' value='0xffffffff'>
+					<input name='wifi_st_ssid' maxlength='31' value='~wifi_st_ssid~'>
+                </div>
+                <div class="line"></div>
+            	<div class="label" id="stPass"></div>
+                <div class="tr">
+					<input name='wifi_st_psw' maxlength='63' value='~wifi_st_psw~'>
+	            </div>
+                <div class="line"></div>
+	            <div class="label">BSSID</div>
+                <div class="tr">
+					<input name='wifi_st_bssid' maxlength='17' value='~wifi_st_bssid~'>
+	            </div>
+                <div class="line"></div>
+	            <div class="label" id="stUseBSS"></div>
+                <div class="tr">
+                    <input type='hidden' name='wifi_st_sbss' value='0'>
+                    <input type='checkbox' name='wifi_st_sbss' value='1'>
+	            </div>
+                <div class="line"></div>
+	            <div class="label" id="stState"></div>
+                <div class="tr">
+                    <select name='wifi_csta'>
+                            <option value='0' id="stIdle"></option>
+                            <option value='1' id="stConnecting"></option>
+                            <option value='2' id="stWrongPass"></option>
+                            <option value='3' id="stNoAP"></option>
+                            <option value='4' id="stFailConn"></option>
+                            <option value='5' id="stGotIP"></option>
+                            <option value='6' id="stOff"></option>
+                    </select>
+	            </div>
+                <div class="line"></div>
+	            <div class="label" id="stIP"></div>
+                <div class="tr">
+					<input type='text' name='wifi_st_ip' maxlength='31' value='~wifi_st_ip~'>
+	            </div>
+                <div class="line"></div>
+	            <div class="label" id="stGate"></div>
+                <div class="tr">
+					<input name='wifi_st_gw' maxlength='31' value='~wifi_st_gw~'>
+			    </div>
+                <div class="line"></div>
+	            <div class="label" id="stMask"></div>
+                <div class="tr">
+					<input name='wifi_st_msk' maxlength='31' value='~wifi_st_msk~'>
+	            </div>
+                <div class="line"></div>
+	            <div class="label" id="stAutoconn"></div>
+                <div class="tr">
+                    <input type='hidden' name='wifi_st_aucn' value='0'>
+                    <input type='checkbox' name='wifi_st_aucn' value='1'>
+	            </div>
+                <div class="line"></div>
+	            <div class="label" id="stMAC"></div>
+                <div class="tr">
+					<input name='wifi_st_mac' maxlength='17' value='~wifi_st_mac~'>
+	            </div>
+                <div class="line"></div>
+	            <div class="label" id="stDHCPon"></div>
+                <div class="tr">
+                    <input type='hidden' name='wifi_st_dhcp' value='0'>
+                    <input type='checkbox' name='wifi_st_dhcp' value='1'>
+	            </div>
+                <div class="line"></div>
+                <div class="tr">
+                    <input type='submit' value='Сохранить' class="btn">
+                    <input type='hidden' name='wifi_newcfg' value='0x17E00'>
+                </div>
+		</form>
+	</div>
+<script>
+var cfg = {
+	wifi_st_aucn:"~wifi_st_aucn~",
+	wifi_st_sbss:"~wifi_st_sbss~",
+	wifi_st_dhcp:"~wifi_st_dhcp~",
+	wifi_csta:("~wifi_st_sta~">5)?6:"~wifi_st_sta~"
+}
+setFormValues(document.forms[1], cfg);
+if(!("~wifi_mode~"&1)) {
+	$('savecfg').disabled = true;
+}
+</script>
+</body></html>

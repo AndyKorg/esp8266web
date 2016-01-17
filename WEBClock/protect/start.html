@@ -1,0 +1,32 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=windows-1251" />
+    <link rel="stylesheet" href="style.css">
+    <script src="scripts.js" type="text/javascript"></script>
+    <script src="captions.js" type="text/javascript"></script>
+    <script type="text/javascript">
+	function GetTime(){
+		xml = GetXMLRequest("time.xml");
+		if (xml){
+			document.getElementById("Time").innerHTML = getXMLValue(xml.responseXML, "time");
+			document.getElementById("Date").innerHTML = getXMLValue(xml.responseXML, "date");
+		}
+	}
+	setInterval("GetTime()", 1000);
+	</script>
+    <title>~clock_name~</title>
+</head>
+<body onload="letCaption(); GetTime()">
+	<div class="div_c">
+    	<div class="lab_4" align="center">
+        	<h1>
+	            <div id="mainCurrentTime"></div><br/>
+                <span id="Time"></span>
+                <br />
+                <span id="Date"></span>
+          	</h1>
+        </div>
+    </div>
+</body>
+</html>

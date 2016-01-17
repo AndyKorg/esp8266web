@@ -1,0 +1,197 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1251" />
+<script src="calendar_ru.js" type="text/javascript"></script>
+<script src="let.min.js" type="text/javascript"></script>
+<script src="scripts.js" type="text/javascript"></script>
+<script src="captions.js" type="text/javascript"></script>
+<style>
+.div_c
+{
+	margin-left:50px;
+	margin-right:50px;
+	margin-top:50px;
+	margin-bottom:50px;
+}
+.in_body
+{
+	margin-top:0px;
+	margin-left:0px;
+	margin-right:0px;
+	margin-bottom:0px;
+	background-color:transparent;
+}
+.white
+{
+	color:White;
+}
+.s15
+{
+	font-size:15px;
+}
+.b
+{
+	font-weight:bold;
+}
+.sp_30
+{
+	width:10px;
+	height:30px;
+}
+.lab_4
+{
+	color:white;
+	font-size:13px;
+}
+.tr
+{
+	text-align:right;
+}
+.label
+{
+	float: left;
+	width: 30%;
+	color:white;
+	margin-bottom: -2px;
+	font-size: 13px;
+}
+.cl
+{
+	clear:left;
+}
+.line
+{
+	height:1px;
+	background-color:white;
+	width:100%;
+	margin-top:3px;
+	margin-bottom:3px;
+	overflow:hidden;
+}
+.sp_10
+{
+	width:10px;
+	height:10px;
+}
+.btn
+{
+	width:100px;
+	height:27px;
+	border-style:none;
+	border-radius:3px 3px 3px 3px;
+	font-size:14px;
+	color:#0163AC;
+	cursor:pointer;
+}
+.watch_label{
+	width:20px;
+	height:20px;
+}
+.long_field{
+	width: 100px;
+	height: 20px;
+}
+</style>
+</head>
+<body class="in_body" onLoad="letCaption()">
+<div class="div_c" style="font-family:Arial">
+	<div>
+        <font class="white s15 b" id="prmAlarm"></font>
+		<form name= "form_alarm_setting" method="post" action="">
+            <div class="lab_4">
+                <div class="label" id="prmAlarmVol"></div>
+                <div class="tr">
+                    <input type="text" class="watch_label" data-let-input="/^[0-9]$/" data-let-template="/^[1-9](?!\d)|[1-5][0-9]|6[0-4]$/" data-let-length="2" value="~volume_alarm_max~" name="volume_alarm_max" id="volume_alarm_max"/>
+        			<div class="line"></div>
+        			<div class="cl"></div>
+				</div>
+                <div class="label" id="prmAlarmVolTune"></div>
+                <div class="tr">
+                    <select id="volume_alarm_type" name="volume_alarm_type" class="date_field" id="volume_alarm_type">
+                        <option value="1" id="prmAlarmVolConst"></option>
+                        <option value="2" id="prmAlarmVolToLevel"></option>
+                        <option value="3" id="prmAlarmVolToMax"></option>
+                        </select>
+                    <input name="volume_alarm_test" type="button" class="btn" onClick="goTest('volume_alarm_max', 'volume_alarm_type','volume_alarm_test')" value="Test"/>
+        			<div class="line"></div>
+        			<div class="cl"></div>
+                    <input name="volume_alarm_save" type="submit" class="btn" onClick="" value="Save"/>
+                </div>
+        	</div>
+		</form>
+        <font class="white s15 b" id="prmKey"></font>
+		<form name= "form_key_setting" method="post" action="">
+            <div class="lab_4">
+                <div class="label" id="prmKeyVol"></div>
+                <div class="tr">
+                    <input type="text" class="watch_label" data-let-input="/^[0-9]$/" data-let-template="/^[1-9](?!\d)|[1-5][0-9]|6[0-4]$/" data-let-length="2" value="~volume_key_max~" name="volume_key_max" id="volume_key_max"/>
+        			<div class="line"></div>
+        			<div class="cl"></div>
+				</div>
+                <div class="label" id="prmKeySound"></div>
+                <div class="tr">
+                    <select name="volume_key_on" id="volume_key_on" class="date_field">
+                        <option value="0" id="mainOptOff"></option>
+                        <option value="1" id="mainOptOn"></option>
+                    </select>
+                    <input name="volume_key_test" type="button" class="btn" onClick="goTest('volume_key_max', 'volume_key_test')" value="Test"/>
+        			<div class="line"></div>
+        			<div class="cl"></div>
+                    <input name="volume_key_save" type="submit" class="btn" onClick="" value="Save"/>
+                </div>
+        	</div>
+		</form>
+        <font class="white s15 b" id="prmFont"></font>
+		<form name= "form_font_setting" method="post" action="">
+            <div class="lab_4">
+                <div class="label" id="prmFontDigit">Вид цифр</div>
+                <div class="tr">
+                    <select name="font_num" id="font_num" class="date_field">
+                        <option value="0" id="prmFontUsual"></option>
+                        <option value="1" id="prmFontNarrow"></option>
+                        <option value="2" id="prmFontWideSerif"></option>
+                        <option value="3" id="prmFontWide"></option>
+                        <option value="4" id="prmFontRect"></option>
+                        <option value="5" id="prmFontSmoothWide"></option>
+                        <option value="6" id="prmFontSmoothNarrow"></option>
+                        </select>
+        			<div class="line"></div>
+        			<div class="cl"></div>
+                    <input name="font_save" type="submit" class="btn" onClick="" value="Save"/>
+                </div>
+        	</div>
+		</form>
+        <div class="line"></div>
+		<form name= "form_clock_name" method="post" action="">
+            <div class="lab_4">
+                <div class="tr">
+                <div class="label" id="prmCusText"></div>
+                    <input name="clock_txtcust" type="text" size='40' maxlength='64' value="~clock_txtcust~"/>
+              	</div>
+                <div class="tr">
+                <div class="label" id="prmClockName"></div>
+                    <input name="clock_name" type="text" class="date_field" maxlength='31' value="~clock_name~"/>
+                <div class="tr">
+                    <input name="clock_save" type="submit" class="btn" onClick="" value="Save"/>
+              	</div>
+        	</div>
+		</form>
+    </div>
+</div>
+	<script type="text/javascript">
+		var cfg = {
+            volume_alarm_type:"~volume_alarm_type~"
+		}
+		setFormValues(document.forms[0], cfg);
+		var cfg1 = {
+            volume_key_on:"~volume_key_on~"
+		}
+		setFormValues(document.forms[1], cfg1);
+		var cfg2 = {
+            font_num:"~font_num~"
+		}
+		setFormValues(document.forms[2], cfg2);
+		child_getH();
+	</script>
+</body>
+</html>

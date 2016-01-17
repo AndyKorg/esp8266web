@@ -277,15 +277,15 @@ void ICACHE_FLASH_ATTR open_all_service(int flg)
 void ICACHE_FLASH_ATTR wifi_handle_event_cb(System_Event_t *evt)
 {
 #if DEBUGSOO > 1
-	os_printf("WiFi event(%u): ", evt->event);
+	//os_printf("WiFi event(%u): ", evt->event);
 #endif
 	switch (evt->event) {
 		case EVENT_SOFTAPMODE_PROBEREQRECVED:
 		{
 #if DEBUGSOO > 1
-			os_printf("Probe Request (MAC:" MACSTR ", RSSI:%d)\n",
+/*			os_printf("Probe Request (MAC:" MACSTR ", RSSI:%d)\n",
 					MAC2STR(evt->event_info.ap_probereqrecved.mac),
-					evt->event_info.ap_probereqrecved.rssi);
+					evt->event_info.ap_probereqrecved.rssi);*/
 #endif
 			add_next_probe_requests(&evt->event_info.ap_probereqrecved);
 			break;

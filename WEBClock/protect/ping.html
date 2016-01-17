@@ -1,0 +1,24 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<script>
+	function pingResultShow()
+	{
+		var stat = +"~ping_result~";
+		if (stat <0){
+			document.getElementById("ntp_ping_result").innerHTML = "Host did not respond (err:~ping_result~)";
+		}
+		if (stat == 0){
+			document.getElementById("ntp_ping_result").innerHTML = "Waiting for response";
+		}
+		else{
+			document.getElementById("ntp_ping_result").innerHTML = "Successfully received "+stat+" from 3 packets";
+		}
+	}
+</script>
+</head>
+<body onLoad="pingResultShow()">
+<div align="right"><font color="white"><b><span id="ntp_ping_result"></span></b></font></div>
+</b>
+</body>
+</html>

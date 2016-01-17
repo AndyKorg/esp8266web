@@ -1,0 +1,46 @@
+<!-- <!DOCTYPE html> -->
+<html><head>
+	<meta http-equiv="Content-type" content="text/html; charset=windows-1251">
+	<title>timeout</title>
+	<link rel="stylesheet" href="style.css">
+	<script src="scripts.js"></script>
+	<script>
+	function parseUrlQuery() {
+		var data = {};
+		if(location.search) {
+			var pair = (location.search.substr(1)).split('&');
+			for(var i = 0; i < pair.length; i ++) {
+				var param = pair[i].split('=');
+				data[param[0]] = param[1];
+			}
+		}
+		return data;
+	}
+
+	function settimer(){
+		var parUrl = parseUrlQuery(window.location);
+		if (parUrl['time']>0)
+			reloadTimer.reload(parUrl['time']);
+		else
+			reloadTimer.reload(100);
+		if (parUrl['label'].length==0)
+			$('label').innerHTML = 'web-server esp8266';
+		else
+			$('label').innerHTML = decodeURIComponent(parUrl['label']);
+	}
+    </script>
+</head>
+<body onLoad="settimer()" class="in_body">
+	<div class="div_c">
+    	<div class="lab_4 center">
+            <h3>
+            <span id='label'></span>
+            <br>
+            * Redirect: http://~sys_ip~/ *
+            <br>
+            Timeout <span id='timer'></span> sec...<br></h3>
+			</div>
+    	</div>
+	</div>
+</body>
+</html>

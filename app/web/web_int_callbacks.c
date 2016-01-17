@@ -48,6 +48,8 @@
 #include "modbustcp.h"
 #endif
 
+#include "../include/customer_html.h"
+
 /*extern uint32 adc_rand_noise;
 extern uint32 dpd_bypass_original;
 extern uint16 phy_freq_offset
@@ -971,7 +973,8 @@ void ICACHE_FLASH_ATTR web_int_callback(TCP_SERV_CONN *ts_conn)
 #ifdef TEST_SEND_WAVE
         else ifcmp("test_adc") web_test_adc(ts_conn);
 #endif
-		else tcp_put('?');
+        else if (!parseHttpGetVar(NULL, 0, web_conn, cstr))	//AndyKorg
+		tcp_put('?');
 }
 
 #endif // USE_WEB

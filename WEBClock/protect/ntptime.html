@@ -1,0 +1,322 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1251" />
+<link rel="stylesheet" href="style.css">
+<script src="captions.js" type="text/javascript"></script>
+<script src="scripts.js" type="text/javascript"></script>
+<script src="let.min.js" type="text/javascript"></script>
+<script>
+	var height = 0;
+	function child_getH()
+	{
+/*		var nh = document.body.offsetHeight+200;
+		if(nh < 500)
+		{
+			nh = 500;
+		}
+		if(height != nh)
+		{
+			height = nh;
+			window.parent.child_height(height);
+		}*/
+	}
+
+	var pingTimer;
+	
+	function ntpPing()
+	{
+		var xhr = new XMLHttpRequest();
+		var params = 'ping_start=';
+		params += document.getElementById("ntp_ip").value;
+		xhr.open("POST", '', true)
+		xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded')
+		xhr.send(params);
+		pingTimer = 8;
+		childPing();
+	}
+
+
+	function childPing()
+	{
+		if (pingTimer != 0){
+			pingTimer--;
+			document.getElementById("ping_iframe_id").src = "ping.html";
+			setTimeout("childPing()", 1000);
+		}
+	}
+	
+	var PeriodValueCurrent = "~ntp_per_value~";
+	
+	function PeriodSetValue(){
+		var cfg1 = {
+			ntp_per_value:PeriodValueCurrent
+		}
+		setFormValues(document.forms[0], cfg1);
+	}
+
+	function PeriodWeek(sel, num, nam){
+		var option = document.createElement("option");
+		sel.appendChild(option);
+		option.setAttribute("value", num);
+		option.innerHTML = nam;
+	}
+	
+	function PeriodChange(){
+		var typePer = document.getElementById('ntp_per_type').value;
+		var parent = document.getElementById('div_period_line');
+		var parentValue = document.getElementById("div_period_value");
+		parentValue.innerHTML = "";
+		var valuePrefix = document.getElementById("div_period_pref");
+		valuePrefix.innerHTML = "";
+		if (typePer === "0"){			//сутки
+			parent.setAttribute("hidden","");
+		}
+		else if (typePer >= "1"){		//неделя или месяц
+			parent.removeAttribute("hidden");
+			if (typePer === "1"){		//неделя
+				var child = document.createElement("select");
+			}
+			else {
+				var child = document.createElement("input");
+			}
+			input = parentValue.appendChild(child);
+			input.setAttribute("name", "ntp_per_value");
+			input.setAttribute('value', PeriodValueCurrent);
+			if (typePer === "1"){		//неделя
+				PeriodWeek(input, "1", (IL==="en")?"on Monday":"в понедельник");
+				PeriodWeek(input, "2", (IL==="en")?"on Tuesday":"во вторник");
+				PeriodWeek(input, "3", (IL==="en")?"on Wednesday":"в среду");
+				PeriodWeek(input, "4", (IL==="en")?"on Thursday":"в четверг");
+				PeriodWeek(input, "5", (IL==="en")?"on Friday":"в пятницу");
+				PeriodWeek(input, "6", (IL==="en")?"on Saturday":"в субботу");
+				PeriodWeek(input, "6", (IL==="en")?"on Sanday":"в воскресенье");
+				PeriodSetValue();
+			}
+			if (typePer === "2"){		//месяц
+				valuePrefix.innerHTML = (IL==="en")?"day of month":"день месяца";
+				input.setAttribute('type', 'text');
+				input.setAttribute('class', 'watch_label');
+				input.setAttribute('data-let-input', "/^[0-9]$/");
+				input.setAttribute('data-let-template', "/^[1-9](?!\d)|[0-1][0-9]|2[0-8]$/");
+				input.setAttribute('data-let-length', "2");
+			}
+		}
+	}
+	</script>
+<style>
+.div_c
+{
+	margin-left:50px;
+	margin-right:50px;
+	margin-top:50px;
+	margin-bottom:50px;
+}
+.in_body
+{
+	margin-top:0px;
+	margin-left:0px;
+	margin-right:0px;
+	margin-bottom:0px;
+	background-color:transparent;
+}
+.white
+{
+	color:White;
+}
+.s15
+{
+	font-size:15px;
+}
+.b
+{
+	font-weight:bold;
+}
+.sp_30
+{
+	width:10px;
+	height:30px;
+}
+.lab_4
+{
+	color:white;
+	font-size:13px;
+}
+.tr
+{
+	text-align:right;
+}
+.label_white
+{
+	font:Arial, Helvetica, sans-serif;
+	color:white;
+	font-size:13px;
+	font-style:bold;
+}
+.cl
+{
+	clear:left;
+}
+.sp_10
+{
+	width:10px;
+	height:10px;
+}
+.btn
+{
+	width:100px;
+	height:27px;
+	border-style:none;
+	border-radius:3px 3px 3px 3px;
+	font-size:14px;
+	color:#0163AC;
+	cursor:pointer;
+}
+.fw
+{
+	float:left;
+	width:50%;
+}
+.col_name
+{
+	width:200px;
+	text-align:left;
+}
+.col_adr_ntp
+{
+	width:100px;
+	text-align:right;
+}
+</style>
+</head>
+<body class="in_body" onLoad="PeriodChange(); letCaption(); PeriodChange();"> <!-- Приходится два раза первыводить что бы перевод списко работал --->
+<div class="div_c" style="font-family:Arial">
+    <font class="white s15 b" id="ntpCaption"></font>
+    <div class="div_c"></div>
+    <form name= "form_ntp_setting" method="post" action="">
+        <table class="table">
+            <tr>
+            	<td colspan="2">
+            		<div class="line"></div>
+                </td>
+            </tr>
+            <tr>
+                <td class="col_name">
+                    <div class="label" id="ntpIPadr"></div>
+                </td>
+                <td class="col_adr_ntp">
+	                <input name="ntp_ip" id="ntp_ip" type="text" class="text" value="~ntp_ip~">
+                </td>
+            </tr>
+            <tr>
+                <td class="col_name">
+                    <iframe width="auto" height="30px" id="ping_iframe_id" style="border-style:none" scrolling="no" align="middle"></iframe>
+                </td>
+                <td class="col_adr_ntp">
+                    <input type="button" class="btn" onClick="ntpPing()" value="Test"/>
+                </td>
+            </tr>
+            <tr>
+            	<td colspan="2">
+            		<div class="line"></div>
+                </td>
+            </tr>
+            <tr>
+                <td class="col_name">
+                    <div class="label" id="ntpPortNum"></div>
+                </td>
+                <td class="col_adr_ntp">                    
+                    <div class="label_white">
+                    	<b>37</b>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+            	<td colspan="2">
+            		<div class="line"></div>
+				</td>
+			</tr>
+            <tr>
+                <td colspan="2">
+                	<div class="label"></div>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="2">
+                	<b><div class="label" id="ntpPeriodCaption"></div></b>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="2">
+                	<div class="line"></div>
+                </td>
+            </tr>
+        	<tr>
+            	<td class="col_name">
+                	<div class="label" id="ntpPeriodTime"></div>
+                </td>
+                <td class="col_adr_ntp">
+                	<div id="ntpPeriodTime">
+                	<input type="text" class="watch_label" data-let-input="/^[0-9]$/" data-let-template="/^[0-9](?!\d)|[0-1][0-9]|2[0-3]$/" data-let-length="2" value="~ntp_per_hour~" name="ntp_per_hour"/> 
+                    <font color="white" face="Times New Roman, Times, serif">:00:00</font>
+                    </div>
+                 </td>
+            </tr>
+            <tr>
+            	<td colspan="2">
+                	<div class="line"></div>
+                </td>
+            </tr>
+            <tr>
+            	<td class="col_name">
+                	<div class="label" id="ntpPeriodType"></div>
+                </td>
+                <td class="col_adr_ntp">
+                    <div class="tr">
+                        <select onChange="PeriodChange()" id="ntp_per_type" style="width:160px;height:20px" name="ntp_per_type">
+                            <option value="0" id="ntpPeriodTypeDay"></option>
+                            <option value="1" id="ntpPeriodTypeWeek"></option>
+                            <option value="2" id="ntpPeriodTypeMonth"></option>
+                      	</select>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+            	<td colspan="2">
+                	<div class="line" id="div_period_line"></div>
+                </td>
+            </tr>
+            <tr>
+            	<td class="col_name">
+                	<div class="label" id="div_period_pref"></div>
+                </td>
+                <td class="col_adr_ntp">
+            		<div id="div_period_value"></div>
+                </td>
+            </tr>
+            <tr>
+            	<td colspan="2">
+                	<div class="line"></div>
+                </td>
+            </tr>
+            <tr>
+                <td class="col_name">
+                </td>
+                <td class="col_adr_ntp">
+                    <div class="lab_4 tr">
+                        <input name="ntp_save" type="submit" class="btn" onClick="" value="Save"/>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </form>
+</div>
+	<script type="text/javascript">
+		child_getH();
+		
+		var cfg = {
+			ntp_per_type:"~ntp_per_type~"
+		}
+		setFormValues(document.forms[0], cfg);
+	</script>
+</body>
+</html>

@@ -60,6 +60,8 @@ struct ping_option pingopt; // for test
 #include "udp_test_port.h"
 #endif
 
+#include "../include/customer_html.h"
+
 extern int rom_atoi(const char *);
 #define atoi rom_atoi
 
@@ -655,6 +657,7 @@ void ICACHE_FLASH_ATTR web_int_vars(TCP_SERV_CONN *ts_conn, uint8 *pcmd, uint8 *
 		timer0_start(val, 1);
 	}
 #endif // USE_TIMER0
+    else parseHttpSetVar(NULL, 0, web_conn, pcmd, pvar);
 #if DEBUGSOO > 5
     else os_printf(" - none! ");
 #endif

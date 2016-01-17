@@ -1,0 +1,85 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<script type="text/javascript">
+/*<%
+CONFIG_VAR(wifi_mode, CFG_WMODE);
+%>*/
+	function init()
+	{
+		document.form_wmode.wifi_mode.value=wifi_mode;
+	}
+	</script>
+<style>
+.div_c
+{
+	margin-left:50px;
+	margin-right:50px;
+	margin-top:50px;
+	margin-bottom:50px;
+}
+.w_s15_b
+{
+	color:White;
+	font-size:15px;
+	font-weight:bold;
+}
+.sp_120
+{
+	width:10px;
+	height:120px;
+}
+.lab_4
+{
+	margin-left:70px;
+	margin-right:50px;
+	color:white;
+	font-size:13px;
+}
+.sp_20
+{
+	height:20px;
+	width:500px;
+}
+.tr
+{
+	text-align:center;
+}
+.in_body
+{
+	margin-top:0px;
+	margin-left:0px;
+	margin-right:0px;
+	margin-bottom:0px;
+	background-color:transparent;
+}
+.btn
+{
+	width:66px;
+	height:27px;
+	border-style:none;
+	border-radius:3px 3px 3px 3px;
+	font-size:14px;
+	color:#0163AC;
+	cursor:pointer;
+}
+</style>
+</head>
+<body class="in_body" onload="init()">
+    <div class="div_c" style="font-family:Arial">
+		<form name= "form_wmode" method="post" action="do_cmd_en.html">
+        <div  style="height:400px;">
+            <font class="w_s15_b">Select Mode</font>
+            <div class="sp_120"></div>
+            <div class="lab_4" style="margin-left:120px">
+                Select Mode: <select name="wifi_mode" style="width:150px"><option value="APSTA">AP+STA mode</option><option value="AP">AP mode</option><option value="STA">STA mode</option></select>
+            </div>
+            <div class="sp_20"></div>
+ 		<div style="width:10px; height:10px"></div>
+		<div style="width:100%;" class="tr"><input onclick="submit()" type="button" class="btn" value="Save"/></div>
+       </div>
+		</form>
+    </div>
+</body>
+</html>
