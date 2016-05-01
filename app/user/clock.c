@@ -15,6 +15,7 @@ uint8 TextCustom[TEXT_CUST_MAX];					//Произвольный текст вы�
 uint8 FontNum;										//Номер шрифта
 struct espVolume VolumeClock[VOL_TYPE_COUNT];		//Состояние регуляторов громкости
 struct sSensor Sensors[SENSOR_MAX];					//Массив сенсоров
+uint8 HZSpeed;										//Скорость горизонтальной прокрутки
 
 
 /*
@@ -102,11 +103,11 @@ u08 what_day(const u08 date, const u08 month, const u08 year){
 /* HourOffset - смещение в часах для требуемой часовой зоны	от -12 до 12*/
 /* Возвращает 1 если все нормально и 0 если ошибка при расчете			*/
 /************************************************************************/
-u08 ICACHE_FLASH_ATTR SecundToDateTime(u32 Secunds, struct sClockValue *Value, s08 HourOffset){
+u08 ICACHE_FLASH_ATTR SecundToDateTime(u32 Secunds, struct sClockValue *RetValue, s08 HourOffset){
 	u32 restTime, restDay, Tmp = DAYS_01_01_2013;
 
-	#define DAYS_IN_MONTH	(BCDtoInt(LastDayMonth((*Value).Month, (*Value).Year)))
-	#define DAYS_IN_YEAR	(IsLeapYear((uint16)(BCDtoInt((*Value).Year)+2000))?366:365)
+	#define DAYS_IN_MONTH	(BCDtoInt(LastDayMonth((*RetValue).Month, (*RetValue).Year)))
+	#define DAYS_IN_YEAR	(IsLeapYear((uint16)(BCDtoInt((*RetValue).Year)+2000))?366:365)
 
 	if ((Secunds > (DAYS_01_01_2013*SEC_IN_DAY))
 		&&
@@ -121,31 +122,40 @@ u08 ICACHE_FLASH_ATTR SecundToDateTime(u32 Secunds, struct sClockValue *Value, s
 		restDay = Secunds/SEC_IN_DAY;						//Количество дней в интервале
 		//Расчет времени
 		restTime = Secunds-(restDay*SEC_IN_DAY);			//Количество секунд оставшихся после вычитания дней, т.е. время дня.
-		(*Value).Hour = restTime/SEC_IN_HOUR;				//Часов
-		restTime -= (((u32)(*Value).Hour)*SEC_IN_HOUR);		//Остаток минут-секунд
-		(*Value).Minute = restTime/SEC_IN_MIN;				//Минут
-		(*Value).Second = restTime-(((u32)(*Value).Minute)*SEC_IN_MIN);	//Секунд
-		(*Value).Hour = bin2bcd_u32((*Value).Hour, 1);		//Приводим к BCD виду
-		(*Value).Minute = bin2bcd_u32((*Value).Minute, 1);
-		(*Value).Second = bin2bcd_u32((*Value).Second, 1);
+		(*RetValue).Hour = restTime/SEC_IN_HOUR;				//Часов
+		restTime -= (((u32)(*RetValue).Hour)*SEC_IN_HOUR);		//Остаток минут-секунд
+		(*RetValue).Minute = restTime/SEC_IN_MIN;				//Минут
+		(*RetValue).Second = restTime-(((u32)(*RetValue).Minute)*SEC_IN_MIN);	//Секунд
+		(*RetValue).Hour = bin2bcd_u32((*RetValue).Hour, 1);		//Приводим к BCD виду
+		(*RetValue).Minute = bin2bcd_u32((*RetValue).Minute, 1);
+		(*RetValue).Second = bin2bcd_u32((*RetValue).Second, 1);
 		//Расчет даты
-		(*Value).Year = YEAR_LIMIT;							//Стартовый год (2013)
+		(*RetValue).Year = YEAR_LIMIT;							//Стартовый год (2013)
 		while(restDay > (Tmp+DAYS_IN_YEAR)){				//Определяется количество целых лет в интервале (с учетом високосных)
 			Tmp += DAYS_IN_YEAR;
-			(*Value).Year = AddOneBCD((*Value).Year);
+			(*RetValue).Year = AddOneBCD((*RetValue).Year);
 		}
 		restDay -= Tmp;										//Остаток дней в году
-		(*Value).Month=1;
+		(*RetValue).Month=1;
 		Tmp = 0;
 		while(restDay > (Tmp+DAYS_IN_MONTH)){				//Определяется количество целых месяцев в интервале оставшемся после вычитания лет
 			Tmp += DAYS_IN_MONTH;
-			(*Value).Month = AddOneBCD((*Value).Month);
+			(*RetValue).Month = AddOneBCD((*RetValue).Month);
 		}
-		(*Value).Date = bin2bcd_u32(restDay - Tmp, 1);		//Остаток дней в месяце это день месяца. Сразу приводится к BCD виду
+		(*RetValue).Date = bin2bcd_u32(restDay - Tmp, 1);		//Остаток дней в месяце это день месяца. Сразу приводится к BCD виду
 		return 1;
 	}
 	return 0;
 }
+
+/*
+ * Преобразование UNIX времени в человекочитаемую дату
+ */
+#define DAYS_01_01_1970 	25567UL 						//Количество дней прошедших между 01.01.1900 и 01.01.1970
+u08 ICACHE_FLASH_ATTR UnixTimeToDateTime(u32 Secunds, struct sClockValue *RetValue, s08 HourOffset){
+	return SecundToDateTime(Secunds+(DAYS_01_01_1970*SEC_IN_DAY), RetValue, HourOffset);
+}
+
 
 /*
  * Коневертирует строку xx-xx-xxxx в дату
@@ -172,4 +182,56 @@ uint8 strtodate(uint8* pvar, struct sClockValue* Value){
 	   	}
 	}
 	return Ret;
+}
+
+/*
+ * Конвертируется строка из utf-8 в win-1251. Только для русского языка, знака градуса и символов до 0x7f!
+ * Коневертированая строка помещется на тот же адрес что и входная
+ */
+void UTF8toWin1251Cyr(char *str){
+
+	#define UTF_8_MASK	0b0001111100111111
+	#define UTF_8_HIGTH 0b0001111100000000
+	#define UTF_8_LOW 	0b0000000000111111
+	#define DEGREE_SYM	0xc2b0
+	#define CYR_OFFSET	0x350
+
+	uint16 utf8, j, i;
+
+	j = 0;
+	i=0;
+	while(str[i]){
+		if (!(str[i] & 0x80)){ //Однобайтовый код
+			str[j++] = str[i];
+		}
+		else{
+			utf8 = (((uint16)str[i]<<8) + ((uint16)str[i+1]));
+			i++;
+			if (utf8 == DEGREE_SYM){
+				str[j++] = str[i];
+			}
+			else{
+				utf8 &= UTF_8_MASK;
+				utf8 = ((utf8 & UTF_8_HIGTH) >>2) + (utf8 & UTF_8_LOW); //Восстанавливются биты символа UTF8
+				str[j++] = (char)(utf8-CYR_OFFSET);	//Конвертируем в win-1251
+			}
+		}
+		i++;
+	}
+	str[j++] = 0;	//Конец строки
+}
+
+/*
+ * Устанавливает следующую дату, время не изменяется
+ */
+void nextDate(struct sClockValue *value){
+	if (LastDayMonth(value->Month, value->Year) == value->Date){
+		if (value->Month == 0x12){
+			value->Year = AddOneBCD(value->Year);
+			value->Month = 0;
+		}
+		value->Month = AddOneBCD(value->Month);
+		value->Date = 0;
+	}
+	value->Date = AddOneBCD(value->Date);
 }

@@ -3,6 +3,7 @@
  *
  */
 #include "../include/ntp.h"
+#include "../include/weather.h"
 #include "../Include/web_utils.h"
 #include "flash_eep.h"
 #include "sdk/mem_manager.h"
@@ -13,6 +14,8 @@
 #include "customer_uart.h"
 #include "include/clock.h"
 #include "include/clock_web.h"
+#include "sdk/add_func.h"
+#include "../include/my_esp8266.h"
 
 
 #ifndef USE_PING
@@ -33,6 +36,8 @@ uint8 ClockWebVer[] = CLOCK_WEB_VER;//Версия вебморды
 //Прототипы функций обработки переменных и команд
 //HTML =============================
 //-------- Get
+//weather
+uint8 ICACHE_FLASH_ATTR weatherCurrent(WEB_SRV_CONN* web_conn, uint8* cstr);
 //volume
 uint8 ICACHE_FLASH_ATTR volumeGet(WEB_SRV_CONN* web_conn, uint8* cstr);
 uint8 ICACHE_FLASH_ATTR volumeNtypeGet(WEB_SRV_CONN* web_conn, uint8* cstr);
@@ -60,6 +65,9 @@ uint8 ICACHE_FLASH_ATTR sensNdataGet(WEB_SRV_CONN* web_conn, uint8* cstr);
 uint8 ICACHE_FLASH_ATTR watchGetDay(WEB_SRV_CONN* web_conn, uint8* cstr);					//День недели
 
 //-------- Set и команды
+//weather
+uint8 ICACHE_FLASH_ATTR weatherSave(WEB_SRV_CONN* web_con, uint8 *pcmd, uint8 *pvar);
+uint8 ICACHE_FLASH_ATTR weatherTest(WEB_SRV_CONN* web_con, uint8 *pcmd, uint8 *pvar);
 //volume
 uint8 ICACHE_FLASH_ATTR volumeSet(WEB_SRV_CONN* web_con, uint8 *pcmd, uint8 *pvar);
 uint8 ICACHE_FLASH_ATTR volumeNtypeSet(WEB_SRV_CONN* web_con, uint8 *pcmd, uint8 *pvar);
@@ -100,6 +108,17 @@ uint8 ICACHE_FLASH_ATTR sensNsave(WEB_SRV_CONN* web_con, uint8 *pcmd, uint8 *pva
 uint8 ICACHE_FLASH_ATTR STOP_Set(WEB_SRV_CONN* web_con, uint8 *pcmd, uint8 *pvar);
 
 //HTML ============================= Список переменных и команд http
+//weather
+pHttpVar HttpWeather[7]={
+	// Name;	varType; 	ArgPrnHttp; 	Value; 			execGet; 	execSet; 			Child;		ChildLen
+	{"api", 	vtString,	"%s",		weatherSet.APIkey,	NULL,		NULL,				NULL,		0},
+	{"city", 	vtWord32,	"%d",		&weatherSet.city,	NULL,		NULL,				NULL, 		0},
+	{"lon", 	vtString,	"%s",		weatherSet.lon,		NULL,		NULL,				NULL, 		0},
+	{"lat", 	vtString,	"%s",		weatherSet.lat,		NULL,		NULL,				NULL, 		0},
+	{"save", 	vtNULL,		NULL,			NULL,			NULL,		weatherSave,		NULL, 		0},
+	{"test", 	vtNULL,		NULL,			NULL,			NULL,		weatherTest,		NULL, 		0},
+	{"current",vtNULL,		NULL,			NULL,		weatherCurrent,	NULL,				NULL, 		0}
+};
 //volume_N
 pHttpVar HttpVolumeN[5]={
 	// Name;	varType; 	ArgPrnHttp; 	Value; 			execGet; 	execSet; 			Child;		ChildLen
@@ -117,8 +136,9 @@ uint8* VolumeType[VOL_TYPE_COUNT]={
 		"sensor_"										//vtSensorTest = 3, получения тестового сигнала от передатчика внешних датчиков TODO:Громкость теста сенсора пока не используется
 };
 //clock_
-pHttpVar HttpClock[5]={
+pHttpVar HttpClock[6]={
 	// Name;	varType; 	ArgPrnHttp; 	Value; 			execGet; 	execSet; 			Child;		ChildLen
+	{"speed", 	vtByte,		"%d", 			&HZSpeed,		NULL,		NULL,				NULL, 		0},
 	{"ver", 	vtString,	"%s", 			ClockWebVer,	NULL,		NULL,				NULL, 		0},
 	{"stop", 	vtNULL,		NULL, 			NULL,			NULL,		STOP_Set,			NULL, 		0},
 	{"name", 	vtString,	"%s",			ClockName,		NULL,		NULL,				NULL, 		0},
@@ -194,7 +214,8 @@ pHttpVar HttpMyRoot[HTTP_ROOT_LEN] = {
 	{"ping_", 	vtNULL,		NULL, 			NULL,	NULL,		NULL,		&HttpPing, 		SizeArray(HttpPing)},
 	{"font_", 	vtNULL,		NULL, 			NULL,	NULL,		NULL,		&HttpFont, 		SizeArray(HttpFont)},
 	{"clock_", 	vtNULL,		NULL, 			NULL,	NULL,		NULL,		&HttpClock, 	SizeArray(HttpClock)},
-	{"volume_", vtNULL,		NULL, 			NULL,	volumeGet,	volumeSet,	NULL, 			0}
+	{"volume_", vtNULL,		NULL, 			NULL,	volumeGet,	volumeSet,	NULL, 			0},
+	{"weather_",vtNULL,		NULL, 			NULL,	NULL,		NULL,		&HttpWeather, 	SizeArray(HttpWeather)}
 };
 
 //UART =============================
@@ -220,6 +241,7 @@ pClockUartCmd ClockUartCmd[UART_NUM_COUNT] = {
 	{CLK_ST_WIFI_AUTH,	NULL,		0, 						UartStAuth},
 	{CLK_ST_WIFI_IP,	NULL,		0, 						UartStIP},
 	{CLK_CUSTOM_TXT,	NULL,		0, 						UartTextCustom},
+	{CLK_HZ_SPEED,		&HZSpeed,   sizeof(HZSpeed), 		NULL}
 };
 
 //COMMON =============================  общие функции
@@ -239,6 +261,62 @@ void ICACHE_FLASH_ATTR SetWatchInClock(uint32 Seconds){
 //HTML ============================= "STOP"
 uint8 ICACHE_FLASH_ATTR STOP_Set(WEB_SRV_CONN* web_con, uint8 *pcmd, uint8 *pvar){
 	ClockUartTx(ClkRead(CLK_STOP), NULL, 0);
+	return 0;
+}
+
+//HTML ============================= "weather_"
+uint8 ICACHE_FLASH_ATTR weatherSave(WEB_SRV_CONN* web_con, uint8 *pcmd, uint8 *pvar){
+	uint8 noErr = weatherSet.city;
+	if (!noErr){
+		noErr = (strlen(weatherSet.lat)==0)?0:strlen(weatherSet.lon);
+	}
+	noErr += strlen(weatherSet.APIkey);
+	if (!noErr){
+		if (flash_read_cfg(&weatherSet, ID_WEATHER, sizeof(weatherSet)) != sizeof(weatherSet)){
+			weatherSet.APIkey[0] = 0;
+			weatherSet.city = 0;
+			weatherSet.lon[0] = 0;
+			weatherSet.lat[0] = 0;
+		}
+		return 0;
+	}
+	uint8 rnd = (uint8)bin2bcd_u32((uint32)weatherSet.APIkey[0], 1);//Как дачтик случайного числа
+	rnd &= 0x1f;
+	weatherSet.second = rnd;
+	if (!flash_save_cfg(&weatherSet, ID_WEATHER, sizeof(weatherSet))){
+#if (DEBUGSOO>0)
+		os_printf("no save\n");
+#endif
+	}
+	return 0;
+}
+
+uint8 ICACHE_FLASH_ATTR weatherTest(WEB_SRV_CONN* web_con, uint8 *pcmd, uint8 *pvar){
+	if (weatherResult.state  == WEATHER_STOP){
+		weatherSet.cnt = WE_TYPE_CURRENT;	//Запросить текущую погоду
+		weatherResFunc = NULL;				//По окончании ничего не делать
+		weatherStart();
+	}
+	return 0;
+}
+
+uint8 ICACHE_FLASH_ATTR weatherCurrent(WEB_SRV_CONN* web_conn, uint8* cstr){
+	if (weatherResult.state == WEATHER_STOP){
+		if (weatherResult.weathers[WE_TYPE_CURRENT].Time){
+			int f = (int)weatherResult.weathers[WE_TYPE_CURRENT].Temperature;
+			#define CURR_TEXT  "today t=%d°C %s"
+			char *tmp = os_zalloc(os_strlen(weatherResult.weathers[WE_TYPE_CURRENT].DescriptUTF8)+os_strlen(CURR_TEXT)+10);
+			os_sprintf_fd(tmp, CURR_TEXT, f, weatherResult.weathers[WE_TYPE_CURRENT].DescriptUTF8);
+			UTF8toWin1251Cyr(tmp);
+			tcp_puts("%s", tmp);
+		}
+		else{
+			tcp_puts("current weather no recived");
+		}
+	}
+	else{
+		tcp_puts("weather in progress");
+	}
 	return 0;
 }
 
@@ -338,6 +416,7 @@ uint8 ICACHE_FLASH_ATTR clockSave(WEB_SRV_CONN* web_con, uint8 *pcmd, uint8 *pva
 		os_printf("customer text save error/n");
 	}
 #endif
+	ClockUartTx(ClkWrite(CLK_HZ_SPEED), (uint8*) &HZSpeed, sizeof(HZSpeed));
 	return 0;
 }
 
@@ -432,23 +511,29 @@ uint8 ICACHE_FLASH_ATTR sensNsave(WEB_SRV_CONN* web_con, uint8 *pcmd, uint8 *pva
 }
 //Чтение данных датчика
 uint8 ICACHE_FLASH_ATTR sensNdataGet(WEB_SRV_CONN* web_conn, uint8* cstr){
-	if (Sensors[idObject].Value == TMPR_NO_SENS){						//Нет датчика
-		tcp_puts(SENS_NO_SENS);
+
+	if SensorIsNo(Sensors[idObject]){
+		tcp_puts(SENS_NO_SENS);											//Нет датчика на шине
 	}
-	else if (Sensors[idObject].Value == TMPR_BAT_LOW){					//батарея датчика разряжена
+	else if SensorBatareyIsLow(Sensors[idObject]){						//батарея датчика разряжена
 		tcp_puts(SENS_BAT_LOW);
 	}
-	else if (Sensors[idObject].Value == TMPR_UNDEF){					//Нет сообщений от радиодатчика
+	else if SensorRFIsNo(Sensors[idObject]){							//Нет сообщений от радиодатчика
 		tcp_puts(SENS_NO_RADIO);
 	}
-	else{																//Значение измеренной велечины
-		if (Sensors[idObject].Value & 0x80){							//Отрицательное значение
-			uint8 sensVal = Sensors[idObject].Value;
-			sensVal = ~sensVal;
-			tcp_puts("-%d", sensVal);
+	else{																//Есть какие-то результаты измерений
+		if SensorIsPress(Sensors[idObject]){							//Это датчик давления
+			tcp_puts("%d", PressureNormal(Sensors[idObject].Value));
 		}
-		else{
-			tcp_puts("%d", Sensors[idObject].Value);
+		else{															//Датчик температуры
+			if (Sensors[idObject].Value & 0x80){						//Отрицательное значение
+				uint8 sensVal = Sensors[idObject].Value;
+				sensVal = ~sensVal;
+				tcp_puts("-%d", sensVal);
+			}
+			else{
+				tcp_puts("%d", Sensors[idObject].Value);
+			}
 		}
 	}
 	return 0;
@@ -745,6 +830,26 @@ uint8 ICACHE_FLASH_ATTR UartNtpStart(uint8 cmd, uint8* pval, uint8 valLen){
 	return 1;
 }
 
+ETSTimer weather_repeat_timet;							//Таймер повторного запроса погоды
+void ICACHE_FLASH_ATTR  weatherRepeat(viud){
+	os_timer_disarm(&weather_repeat_timet);
+	weatherStart();
+}
+//Выввается по окончании процесса получения погоды
+void ICACHE_FLASH_ATTR weatherEndProcess(err_t result){
+	if (result == ERR_OK){
+		if (weatherSet.cnt == WE_TYPE_CURRENT){			//После запроса текущей погоды запрашивается прогноз
+			weatherSet.cnt = WE_TYPE_FORECAST;
+		}
+		else{
+			return;										//Все запрошено
+		}
+	}
+	weatherResult.state = WEATHER_IN_PROGRESS;			//Процесс еще не завершен
+	os_timer_disarm(&weather_repeat_timet);				//Повторный запрос
+	os_timer_setfn(&weather_repeat_timet, (os_timer_func_t *) weatherRepeat, NULL);
+	ets_timer_arm_new(&weather_repeat_timet, 1000, OS_TIMER_SIMPLE, OS_TIMER_MS);
+}
 /*
  * Использется как односекундный таймер
  */
@@ -768,6 +873,15 @@ uint8 ICACHE_FLASH_ATTR UartWatchReciv(uint8 cmd, uint8* pval, uint8 valLen){
 				default:
 					break;
 			};
+		}
+		if (os_strlen(weatherSet.APIkey)){				//Запрос погоды если настроено
+			if ((Watch.Second == weatherSet.second) && (Watch.Minute == 0)){
+				if (weatherResult.state == WEATHER_STOP){
+					weatherSet.cnt = WE_TYPE_CURRENT;
+					weatherResFunc = &weatherEndProcess;	//По окончании запросить прогноз
+					weatherStart();
+				}
+			}
 		}
 	}
 	return 1;
@@ -851,6 +965,41 @@ uint8 ICACHE_FLASH_ATTR UartStIP(uint8 cmd, uint8* pval, uint8 valLen){
 }
 
 /*
+ * Формирует описание погоды на заданную дату и час
+ */
+void ICACHE_FLASH_ATTR WeatherGetFromDate(struct sClockValue *needTime, char *text, char *prefix){
+	uint8 i=WE_TYPE_CURRENT+1;
+	struct sClockValue time;
+
+	for (;i<WE_TYPE_FORECAST;i++){
+		if (UnixTimeToDateTime(weatherResult.weathers[i].Time, &time, ClockZone)){
+			if ((time.Date == needTime->Date)
+				 && (time.Month == needTime->Month)
+				 && (time.Year == needTime->Year)
+				 && (BCDtoInt(time.Hour) >= BCDtoInt((needTime->Hour)))){
+				int t = (int)weatherResult.weathers[i].Temperature;
+				text += os_strlen(text);
+				os_sprintf_fd(text, "%s t %d°C %s.", prefix, t, weatherResult.weathers[i].DescriptUTF8);
+#if DEBUGSOO==1
+					os_printf("find weathr ok\n");
+#endif
+				break;
+			}
+		}
+	}
+}
+
+err_t TemperatureSensorIsHave(void){
+	uint8 i=0;
+	for(;i<SENSOR_MAX;i++){
+		if (!SensorIsPress(Sensors[i]) && SensorIsSet(Sensors[i])){
+			return ERR_OK;
+		}
+	}
+	return ERR_VAL;
+}
+
+/*
  * Текст для вывода вместе с датой или по команде
  */
 uint8 ICACHE_FLASH_ATTR UartTextCustom(uint8 cmd, uint8* pval, uint8 valLen){
@@ -860,7 +1009,67 @@ uint8 ICACHE_FLASH_ATTR UartTextCustom(uint8 cmd, uint8* pval, uint8 valLen){
 		if (flash_read_cfg(TextCustom, ID_TXT_CUSTOM, TEXT_CUST_MAX)<0){
 			os_strcpy(TextCustom, TEXT_CUST_DEFAULT);
 		}
-		ClockUartTx(ClkWrite(CLK_CUSTOM_TXT), TextCustom, TEXT_CUST_MAX);
+		//Погода выводится только если не определена произвольная строка
+		if (os_strlen(TextCustom) == 0 || ((os_strlen(TextCustom)==1) && (TextCustom[0] == ' '))){
+
+			char *text = (char *)TextCustom;
+
+			if (weatherResult.state == WEATHER_STOP){
+				if ((weatherResult.weathers[WE_TYPE_CURRENT].Time) && (weatherResult.weathers[WE_TYPE_CURRENT+1].Time)){
+					if (TemperatureSensorIsHave() != ERR_OK){	//Текущая температура и погода выводится только если нет датчика температуры
+						struct sClockValue currTime;
+						if (UnixTimeToDateTime(weatherResult.weathers[WE_TYPE_CURRENT].Time, &currTime, ClockZone)){
+							text += os_strlen(text);
+							os_sprintf_fd(text, "на %02x:%02x", currTime.Hour, currTime.Minute);
+						}
+						int t = (int)weatherResult.weathers[WE_TYPE_CURRENT].Temperature;
+						text += os_strlen(text);
+						os_sprintf_fd(text, " t %d°C %s.", t, weatherResult.weathers[WE_TYPE_CURRENT].DescriptUTF8);
+					}
+
+					uint8 hour = BCDtoInt(Watch.Hour);
+					struct sClockValue needDate = Watch;
+					if(	((hour >=0) && (hour <6))		//Ночь, прогноз на следующее утро (6 часов) и день (15 часов)
+						|| (hour >=18)){
+						nextDate(&needDate);
+						needDate.Hour = 0x06;
+						WeatherGetFromDate(&needDate, text, " утром");
+						needDate.Hour = 0x15;
+						WeatherGetFromDate(&needDate, text, " днем");
+					}
+					else if ((hour >=6) && (hour <12)){//Утро, прогноз на день (15) и вечер (18)
+						needDate.Hour = 0x15;
+						WeatherGetFromDate(&needDate, text, " днем");
+						needDate.Hour = 0x18;
+						WeatherGetFromDate(&needDate, text, " вечером");
+					}
+					else if((hour >=12) && (hour <18)){//День, прогноз на вечер (21) и следующее утро(6)
+						needDate.Hour = 0x21;
+						WeatherGetFromDate(&needDate, text, " вечером");
+						nextDate(&needDate);
+						needDate.Hour = 0x06;
+						WeatherGetFromDate(&needDate, text, " утром");
+					}
+				}
+				else{									//Похоже погоду еще не запрашвал, запрашиваем
+					if (os_strlen(weatherSet.APIkey)){
+						weatherSet.cnt = WE_TYPE_CURRENT;
+						weatherResFunc = &weatherEndProcess;	//По окончании запросить прогноз
+						weatherStart();
+						os_strcpy(text, "старт загрузки прогноза ");
+					}
+				}
+			}
+			else{
+				os_strcpy(text, "прогноз загружается ");
+			}
+			UTF8toWin1251Cyr(TextCustom);
+			ClockUartTx(ClkWrite(CLK_CUSTOM_TXT), TextCustom, TEXT_CUST_MAX);
+			*TextCustom = 0;
+		}
+		else{
+			ClockUartTx(ClkWrite(CLK_CUSTOM_TXT), TextCustom, TEXT_CUST_MAX);
+		}
 	}
 	return Ret;
 }
@@ -872,6 +1081,7 @@ void ICACHE_FLASH_ATTR ClockWebInit(void){
 	os_printf("clock web server start\n");
 	os_printf("Watch adr = %x\n", &Watch);
 #endif
+	uint8 i = 0;
 
 	//Имя часов в вебморде
 	if (flash_read_cfg(ClockName, ID_CLOCK_NAME, CLOCK_NAME_MAX)<0){
@@ -896,12 +1106,25 @@ void ICACHE_FLASH_ATTR ClockWebInit(void){
 		os_strcpy(TextCustom, TEXT_CUST_DEFAULT);
 	}
 
-	uint8 i = 0;
-	for (; i < ALARM_MAX-1; ++i) {		//Присвоить номера будильникам
+	//Клиент погоды
+	if (flash_read_cfg(&weatherSet, ID_WEATHER, sizeof(weatherSet)) != sizeof(weatherSet)){
+		weatherSet.APIkey[0] = 0;
+		weatherSet.city = 0;
+		weatherSet.lon[0] = 0;
+		weatherSet.lat[0] = 0;
+		weatherSet.cnt = WEATHER_MAX;
+	}
+
+	weatherResult.state = WEATHER_STOP;
+	for(i=0;i<WEATHER_MAX;i++){
+		weatherResult.weathers[i].Time = 0;
+	}
+
+	for (i=0; i < ALARM_MAX-1; ++i) {		//Присвоить номера будильникам
 		Alarms[i].Id = i;
 	}
 	for (i=0;i<SENSOR_MAX;i++){
-		Sensors[i].Value = TMPR_UNDEF;	//Неопределенное значение для сенсора
+		SensorNoInBus(Sensors[i]);			//Датчика на шине нет
 	}
 	for (i=0;i<VOL_TYPE_COUNT;i++){
 		VolumeClock[i].id = i;
@@ -909,7 +1132,7 @@ void ICACHE_FLASH_ATTR ClockWebInit(void){
 	Watch.Second = 0;
 	Watch.Minute = 0;
 	Watch.Hour = 0;
-	Watch.Date = 0;						//Нулевая дата как признак неправильного времени
+	Watch.Date = 0;							//Нулевая дата как признак неправильного времени
 	Watch.Month = 0;
 	Watch.Year = 0;
 	ClockUartTx(ClkWrite(CLK_ALL), &i, 1);	//Запросить переменные у часов

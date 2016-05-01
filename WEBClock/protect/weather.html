@@ -1,0 +1,224 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1251" />
+<script src="calendar_ru.js" type="text/javascript"></script>
+<script src="let.min.js" type="text/javascript"></script>
+<script src="scripts.js" type="text/javascript"></script>
+<script src="captions.js" type="text/javascript"></script>
+<style>
+.div_c
+{
+	margin-left:50px;
+	margin-right:50px;
+	margin-top:50px;
+	margin-bottom:50px;
+}
+.in_body
+{
+	margin:0 0 0 0;
+	background-color:transparent;
+}
+.white
+{
+	color:White;
+}
+.s15
+{
+	font-size:15px;
+}
+.b
+{
+	font-weight:bold;
+}
+.sp_30
+{
+	width:10px;
+	height:30px;
+}
+.lab_4
+{
+	color:white;
+	font-size:13px;
+}
+.tr
+{
+	text-align:right;
+	margin:5px 0 5px 0;
+}
+.label
+{
+	float: left;
+	/*width: 30%;*/
+	color:white;
+	margin: 1 0 0 -2px;
+	font-size: 13px;
+}
+.cl
+{
+	clear:left;
+}
+.line
+{
+	height:1px;
+	background-color:white;
+	width:100%;
+	margin-top:3px;
+	margin-bottom:3px;
+	overflow:hidden;
+}
+.sp_10
+{
+	width:10px;
+	height:10px;
+}
+.btn
+{
+	width:100px;
+	height:27px;
+	border-style:none;
+	border-radius:3px 3px 3px 3px;
+	font-size:14px;
+	color:#0163AC;
+	cursor:pointer;
+}
+.watch_label{
+	/*width:20px;*/
+	height:20px;
+}
+.long_field{
+	width: 100px;
+	height: 20px;
+}
+</style>
+<script>
+	var weatherTimer;
+	
+	function weatherCheck()
+	{
+		if (weatherTimer === 0){
+			return;
+		}
+		var xhr = new XMLHttpRequest();
+		var params = 'weather_city='+document.getElementById("weather_city").value;
+		params += '&weather_lon='+document.getElementById("weather_lon").value;
+		params += '&weather_lat='+document.getElementById("weather_lat").value;
+		params += '&weather_api='+document.getElementById("weather_api").value;
+		params += '&weather_test=1';
+		xhr.open("POST", '', true)
+		xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded')
+		xhr.send(params);
+		weatherTimer = 8;
+		childCheck();
+	}
+
+
+	function childCheck()
+	{
+		if (weatherTimer){
+			weatherTimer--;
+			var xhr = new XMLHttpRequest();
+			xhr.open("GET", 'we_cur.xml', false);
+			xhr.setRequestHeader('Content-Type', 'text/plain')
+			xhr.send();
+			if (xhr.status === 200){
+				document.getElementById("weatherCurrent").innerHTML = xhr.responseXML.documentElement.textContent;
+			}
+			setTimeout("childCheck()", 1000);
+		}
+	}
+
+	var parseXml;
+
+	if (typeof window.DOMParser != "undefined") {
+		parseXml = function(xmlStr) {
+			return ( new window.DOMParser() ).parseFromString(xmlStr, "text/xml");
+		};
+	} else if (typeof window.ActiveXObject != "undefined" &&
+		   new window.ActiveXObject("Microsoft.XMLDOM")) {
+		parseXml = function(xmlStr) {
+			var xmlDoc = new window.ActiveXObject("Microsoft.XMLDOM");
+			xmlDoc.async = "false";
+			xmlDoc.loadXML(xmlStr);
+			return xmlDoc;
+		};
+	} else {
+		throw new Error("No XML parser found");
+	}
+
+</script>
+</head>
+<body class="in_body" onLoad="letCaption()">
+<div class="div_c" style="font-family:Arial">
+	<div>
+        <font class="white s15 b" id="weCaption"></font>
+		<font class="white s15 b">openweathermap.org</font>
+		<div class="sp_10">&nbsp;</div>
+        <div class="line"></div>
+		<form name= "form_weather_setting" method="post" action="">
+            <div class="lab_4">
+				<div class="label">
+					<span id="weCity" style="float:left; margin-right:3px;"></span>
+					<a style="color:white; text-decoration:none; font-weight:bold;" href="http://bulk.openweathermap.org/sample/city.list.json.gz" id="weListRef"></a>
+				</div>
+                <div class="tr">
+                    <input type="text" class="watch_label" value="~weather_city~" name="weather_city" id="weather_city"/>
+        			<div class="line"></div>
+        			<div class="cl"></div>
+				</div>
+                <div class="label" id="weGeo"></div>
+				<br>
+                <div class="tr">
+					<div class="label" id="weLon"></div>
+                    <input type="text" class="watch_label" value="~weather_lon~" name="weather_lon" id="weather_lon"/>
+                </div>
+                <div class="tr">
+					<div class="label" id="weLat"></div>
+                    <input type="text" class="watch_label" value="~weather_lat~" name="weather_lat" id="weather_lat"/>
+                </div>
+				<div class="line"></div>
+				<div class="cl"></div>
+				<div class="label" style="margin-bottom: -2px;">
+					<span id="weApiKey" style="float:left; margin-right:3px;"></span>
+					<a style="color:white; text-decoration:none; font-weight:bold;" 
+						href="http://openweathermap.org/appid" id="weApiNote"
+						target="apikey"
+						onclick="window.open(this.href,this.target,'width=300,height=300'); return false;">
+					</a>
+				</div>
+				<div class="tr">
+						<input type="text" class="watch_label" value="~weather_api~" name="weather_api" id="weather_api"/>
+					</div>
+				<div class="line"></div>
+				<div class="cl"></div>
+				<div class="label">
+					<span id="weatherCurrent"><span>
+				</div>
+				<div class="tr">
+					<input name="weather_test" type="button" class="btn" onClick="weatherCheck()" value="Test"/>
+				</div>
+				<div class="line"></div>
+				<div class="cl"></div>
+				<div class="tr">
+                    <input name="weather_save" type="submit" class="btn" value="Save"/>
+              	</div>
+        	</div>
+		</form>
+    </div>
+</div>
+	<script type="text/javascript">
+		var cfg = {
+            volume_alarm_type:"~volume_alarm_type~"
+		}
+		setFormValues(document.forms[0], cfg);
+		var cfg1 = {
+            volume_key_on:"~volume_key_on~"
+		}
+		setFormValues(document.forms[1], cfg1);
+		var cfg2 = {
+            font_num:"~font_num~"
+		}
+		setFormValues(document.forms[2], cfg2);
+		//child_getH();
+	</script>
+</body>
+</html>

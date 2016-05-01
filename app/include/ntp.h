@@ -30,4 +30,8 @@ extern NTP_GET_SECOND ntpGetSeconds;	//Callback функция вызываем�
 
 err_t ICACHE_FLASH_ATTR ntpStart(void);
 
+
+extern u8_t JsonGo;
+void InitJSON();
+
 #endif /* APP_INCLUDE_NTP_H_ */

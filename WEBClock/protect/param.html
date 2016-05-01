@@ -46,14 +46,16 @@
 .tr
 {
 	text-align:right;
+	margin: 5px 0 5px 0;
 }
 .label
 {
 	float: left;
 	width: 30%;
 	color:white;
-	margin-bottom: -2px;
 	font-size: 13px;
+	text-align: left;
+	margin-top: 3px;
 }
 .cl
 {
@@ -165,11 +167,11 @@
 		<form name= "form_clock_name" method="post" action="">
             <div class="lab_4">
                 <div class="tr">
-                <div class="label" id="prmCusText"></div>
+					<div class="label" id="prmCusText"></div>
                     <input name="clock_txtcust" type="text" size='40' maxlength='64' value="~clock_txtcust~"/>
               	</div>
                 <div class="tr">
-                <div class="label" id="prmClockName"></div>
+					<div class="label" id="prmClockName"></div>
                     <input name="clock_name" type="text" class="date_field" maxlength='31' value="~clock_name~"/>
                 <div class="tr">
                     <input name="clock_save" type="submit" class="btn" onClick="" value="Save"/>

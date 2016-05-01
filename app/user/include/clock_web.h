@@ -33,11 +33,13 @@
 #define ID_NTP_PERIOD	0xddd3	//Периодичность получения времени с внешнего сервера NTP
 #define ID_CLOCK_NAME	0xddd4	//Имя часов в заголовке html-страницы
 #define ID_TXT_CUSTOM	0xddd5	//Произвольный текст выводимый перед датой
+#define ID_WEATHER		0xddd6	//Настройка клиента погоды
+
 
 #define CLOCK_NAME_DAFAULT	"Имя часов"	//Имя часов по умолчанию
-#define TEXT_CUST_DEFAULT	""	//Произвольный текст по умолчанию
+#define TEXT_CUST_DEFAULT	" "	//Произвольный текст по умолчанию
 #define CLOCK_ZONE_DEFAULT	0	//Часовая зона по умолчанию
-#define CLOCK_WEB_VER		"0.0.2"	//Версия веб-морды
+#define CLOCK_WEB_VER		"0.0.4"	//Версия веб-морды
 
 //Настройка периода проверки
 #define NTP_PERIOD_ONCE_DAY		0		//Один раз в сутки, можно указать только час

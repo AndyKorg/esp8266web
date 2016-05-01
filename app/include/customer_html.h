@@ -9,7 +9,7 @@
 #include "../web/include/web_srv_int.h"
 #include "lwip/err.h"
 
-#define HTTP_ROOT_LEN	8			//Количество элементов в корневом списке переменых и команд
+#define HTTP_ROOT_LEN	9			//Количество элементов в корневом списке переменых и команд
 #define pHttpVarSize	sizeof(*pHttpVar)
 #define SizeArray(a)	((sizeof(a)/sizeof(a[0])))	//Размер массива
 #define MAX_CMD_ID		9			//Максимальное значение индекса N в команде cmdParent_N_cmdChild.

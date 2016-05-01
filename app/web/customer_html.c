@@ -10,7 +10,7 @@
  *	Возвращает найденный индекс или число на 1 большее maxNum. В *lenCmd помещается количество
  *	обработанных символов в строке cmd
  */
-uint8 ParceNumObject(uint8* pcmd, uint8 maxNum, uint8 *Ident[], uint8 *lenCmd){
+uint8 ICACHE_FLASH_ATTR ParceNumObject(uint8* pcmd, uint8 maxNum, uint8 *Ident[], uint8 *lenCmd){
 #if MAX_CMD_ID >9
 	#error"MAX_CMD_ID more then 9, need rewrite function ParceNumObject"
 #else
@@ -147,7 +147,19 @@ uint8 ICACHE_FLASH_ATTR parseHttpSetVar(pHttpVar *ParentVar, uint8 ParentLen, WE
 							*((uint8*)VarList[i].Value) = (uint8)rom_atoi(pvar);
 						break;
 					case vtString:
-						os_sprintf_fd(((uint8*)VarList[i].Value), "%s", pvar);
+#if DEBUGSOO==1
+		os_printf("param = %s val = %s\n", pcmd, pvar);
+#endif
+
+						if (os_strlen(pvar) == 0){	//Пустая строка не хораняется, поэтому исопьзуется пробел
+							os_sprintf_fd((uint8*)VarList[i].Value, " ");
+						}
+						else{
+							os_sprintf_fd((uint8*)VarList[i].Value, "%s",pvar);
+						}
+#if DEBUGSOO==1
+		os_printf("after save = %s\n", ((uint8*)VarList[i].Value));
+#endif
 						break;
 					case vtWord16:
 						if ((VarList[i].ArgPrnHttp[strlen(VarList[i].ArgPrnHttp)-1]=='x') || (VarList[i].ArgPrnHttp[strlen(VarList[i].ArgPrnHttp)-1]=='X'))

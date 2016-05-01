@@ -33,11 +33,12 @@ function getUrl(v,lan)
         case 2:return "alarm"+end;break;//Будильники
         case 3:return "sensor"+end;break;//Датчики
         case 4:return "ntptime"+end;break;//Время интернета
-        case 5:return "param"+end;break;//Настройки
-        case 6:return "wireless"+end;break;//Клиент WiFi
-        case 7:return "wirepoint"+end;break;//Сервер WiFi
-        case 8:return "restart"+end;break;//Рестарт
-		case 9:return "reset"+end;break;//Возврат к заодским установкам
+        case 5:return "weather"+end;break;//погода
+        case 6:return "param"+end;break;//Настройки
+        case 7:return "wireless"+end;break;//Клиент WiFi
+        case 8:return "wirepoint"+end;break;//Сервер WiFi
+        case 9:return "restart"+end;break;//Рестарт
+		case 10:return "reset"+end;break;//Возврат к заодским установкам
     }
 }
 function underline(c,v)

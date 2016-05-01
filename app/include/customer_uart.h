@@ -48,7 +48,7 @@ typedef struct{					//Ппинятая команда UART
 
 #define CLK_NODATA		0						//Индикатор отсутствия данных в команде. Введно для удобства
 
-#define UART_NUM_COUNT	9						//Количество команд и переенных для приема от внешнего модуля
+#define UART_NUM_COUNT	10						//Количество команд и переенных для приема от внешнего модуля
 extern pClockUartCmd ClockUartCmd[UART_NUM_COUNT];//Список команд uart обрабатываемых при приеме данных от часов
 
 void ICACHE_FLASH_ATTR ClockUartInit(void);		//инициализация порта uart

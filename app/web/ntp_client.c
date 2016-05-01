@@ -17,6 +17,8 @@
 #include "my_esp8266.h"
 #include "user_interface.h"
 
+#include "lwip/tcp.h"
+
 struct udp_pcb* udp_ntp = NULL;			//Соединение по udp
 
 #define NTP_OUT_BYTE	0x53			//Отправляемый байт на порт ntp сервера. Может быть любой
@@ -130,5 +132,3 @@ err_t ICACHE_FLASH_ATTR ntpStart(void){
 	pbuf_free(p);
 	return err;
 }
-
-

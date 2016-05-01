@@ -13,7 +13,8 @@ var captionRU = {
 	mpMenuWiFiServer:"Сервер WiFi",
 	mpMenuRestart:"Перезагрузка",
 	mpMenuRestore:"Восстановление",
-
+	mpMenuWeatherServer:"Погода",
+	
 	//-- start
 	mainCurrentTime:"Текущее время и дата",
 	//-- clock
@@ -56,6 +57,15 @@ var captionRU = {
 	ntpPeriodTypeDay:"сутки",
 	ntpPeriodTypeWeek:"неделю",
 	ntpPeriodTypeMonth:"месяц",
+	//-- weather
+	weCaption:"Сервер погоды",
+	weCity:"Индекс города из списка",
+	weListRef:"(скачать)",
+	weGeo:"ИЛИ географические координаты",
+	weApiKey:"API key",
+	weApiNote:"(подробнее)",
+	weLon:"долгота (lon)",
+	weLat:"широта (lat)",
 	//-- param
 	prmAlarm:"Сигнал будильника",
 	prmAlarmVol:"Громкость (от 1 до 64)",
@@ -151,6 +161,7 @@ var captionEN = {
 	mpMenuWiFiServer:"WiFi AP",
 	mpMenuRestart:"Restart",
 	mpMenuRestore:"Restore",
+	mpMenuWeatherServer:"Weather",
 	//-- start
 	mainCurrentTime:"Now",
 	//-- clock
@@ -193,6 +204,15 @@ var captionEN = {
 	ntpPeriodTypeDay:"day",
 	ntpPeriodTypeWeek:"week",
 	ntpPeriodTypeMonth:"month",
+	//-- weather
+	weCaption:"Weather server",
+	weCity:"City ID from list",
+	weListRef:"(download)",
+	weGeo:"OR geographical coordinates",
+	weApiKey:"API key",
+	weApiNote:"(about)",
+	weLon:"longitude",
+	weLat:"latitude",
 	//-- param
 	prmAlarm:"The alarm",
 	prmAlarmVol:"Volume (1 to 64)",

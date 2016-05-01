@@ -14,7 +14,7 @@
 	#define WIFI_AP_PASSWORD	"0123456789"
 #endif
 #ifndef WIFI_ST_NAME
-	#define WIFI_ST_NAME	"HOMEAP"
+	#define WIFI_ST_NAME	"default"
 #endif
 #ifndef WIFI_ST_PASSWORD
 	#define WIFI_ST_PASSWORD	"0123456789"
@@ -23,7 +23,7 @@
 	#define WIFI_MODE STATIONAP_MODE // SOFTAP_MODE // STATION_MODE
 #endif
 #ifndef WIFI_ST_AUTOCONNECT
-	#define WIFI_ST_AUTOCONNECT 0
+	#define WIFI_ST_AUTOCONNECT 1
 #endif
 #ifndef PHY_MODE
 	#define PHY_MODE PHY_MODE_11N // PHY_MODE_11G // PHY_MODE_11B
