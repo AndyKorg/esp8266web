@@ -69,7 +69,7 @@ extern volatile uint32 io4_regs_[384];	// 0x60009800
 #define I2S_BASE		i2s_		// 0x60000E00
 #define UART1_BASE		uart1_		// 0x60000F00
 #define RTC_RAM_BASE	rtc_ram_	// 0x60001000	// Size: 1024 bytes
-#define RTC_MEM_BASE	rtc_mem_	// 0x60001100
+#define RTC_MEM_BASE	rtc_mem_	// 0x60001100   // Size: 768 bytes, 192 dword registers, user data последние 512 байт
 
 /* io4 section */
 #define IO4_BASE		io4_regs_	// 0x60009800	// Size: 1536 bytes
@@ -128,13 +128,15 @@ extern volatile uint32 io4_regs_[384];	// 0x60009800
 #define Select_CLKx1() CLK_PRE_PORT = (CLK_PRE_PORT >> 1) << 1
 
 // 0x3FF00018
-//#define DPORT_OFF18		dport_[6] // use clockgate_watchdog(flg) { if(flg) 0x3FF00018 &= 0x77; else 0x3FF00018 |= 8; }
+#define DPORT_OFF18		dport_[6] // use clockgate_watchdog(flg) { if(flg) 0x3FF00018 &= 0x77; else 0x3FF00018 |= 8; }
 
 /* 0x3ff00020 is isr flag register, (ESP8266 SPI Module User Guide)
+  bit0 is for uart0 isr
+  bit2 is for uart1 isr
   bit4 is for spi isr,
   bit7 is for hspi isr,
   bit9 is for i2s isr */
-//#define DPORT_OFF20		dport_[8]
+#define DPORT_OFF20		dport_[8]
 
 /* 0x3ff00024
  bit7 16k IRAM base 0x40108000 = SPI cache flash  
@@ -486,7 +488,7 @@ typedef enum {
 /* RTC_SLP_VAL: 0x60000704 */
 #define IO_RTC_SLP_VAL			rtc_[1]	// the target value of RTC_COUNTER for wakeup from light-sleep/deep-sleep
 //0x60000708
-#define IO_RTC_2				rtc_[2]	// bit21 - rtc_get_reset_reason(), bit20 - rtc_enter_sleep()
+#define IO_RTC_2				rtc_[2]	// bit21 - rtc_get_reset_reason() { & (1<<21) }, bit20 = 1 - rtc_enter_sleep()
 //0x6000070C
 #define IO_RTC_3				rtc_[3]
 //0x60000710
@@ -495,9 +497,9 @@ typedef enum {
 //bit31 =1 источник тактирования для I2S, ... = PLL (80MHz)
 //bit25,26 =1 источник тактирования для SAR ... = PLL (80MHz)
 //0x60000714
-#define IO_RTC_5				rtc_[5]	// bitrtc_get_reset_reason()
+#define IO_RTC_5				rtc_[5]	// bit0..3: rtc_get_reset_reason()
 //0x60000718
-#define IO_RTC_6				rtc_[6]	// bitrtc_get_reset_reason()
+#define IO_RTC_6				rtc_[6]	// rtc_get_reset_reason()
 /* RTC_SLP_CNT_VAL:	0x6000071C */
 #define IO_RTC_SLP_CNT_VAL		rtc_[7]	// the current value of RTC_COUNTER
 /* IO_RTC_INT_ST:	0x60000720 */
@@ -593,8 +595,8 @@ typedef enum {
 #define GPIO_MUX_FUN_MASK			((1<<GPIO_MUX_FUN_BIT0)|(1<<GPIO_MUX_FUN_BIT1)|(1<<GPIO_MUX_FUN_BIT2))
 
 #define VAL_MUX_GPIO0_SDK_DEF	(1<<GPIO_MUX_PULLUP_BIT)	// GPIO0, input
-#define VAL_MUX_GPIO1_SDK_DEF	0		// UART0, TX0, Outnput
-#define VAL_MUX_GPIO2_SDK_DEF	0		// UART1, TX1, Outnput
+#define VAL_MUX_GPIO1_SDK_DEF	0		// UART0, TX0, Output
+#define VAL_MUX_GPIO2_SDK_DEF	0		// UART1, TX1, Output
 #define VAL_MUX_GPIO3_SDK_DEF	(1<<GPIO_MUX_PULLUP_BIT)	// UART0, RX0, Input
 #define VAL_MUX_GPIO4_SDK_DEF	(1<<GPIO_MUX_PULLUP_BIT)	// GPIO4, input
 #define VAL_MUX_GPIO5_SDK_DEF	(1<<GPIO_MUX_PULLUP_BIT)	// GPIO5, input
@@ -610,8 +612,8 @@ typedef enum {
 #define VAL_MUX_GPIO15_SDK_DEF	((1<<GPIO_MUX_FUN_BIT0) | (1<<GPIO_MUX_FUN_BIT1) | (1<<GPIO_MUX_PULLUP_BIT))	// GPIO15, input
 
 #define VAL_MUX_GPIO0_IOPORT	(1<<GPIO_MUX_PULLUP_BIT)	// GPIO0, input
-#define VAL_MUX_GPIO1_IOPORT	((1<<GPIO_MUX_FUN_BIT0) | (1<<GPIO_MUX_FUN_BIT1) | (1<<GPIO_MUX_PULLUP_BIT))	// UART0, TX0, Outnput
-#define VAL_MUX_GPIO2_IOPORT	(1<<GPIO_MUX_PULLUP_BIT)	// UART1, TX1, Outnput
+#define VAL_MUX_GPIO1_IOPORT	((1<<GPIO_MUX_FUN_BIT0) | (1<<GPIO_MUX_FUN_BIT1) | (1<<GPIO_MUX_PULLUP_BIT))	// UART0, TX0, Output
+#define VAL_MUX_GPIO2_IOPORT	(1<<GPIO_MUX_PULLUP_BIT)	// UART1, TX1, Output
 #define VAL_MUX_GPIO3_IOPORT	((1<<GPIO_MUX_FUN_BIT0) | (1<<GPIO_MUX_FUN_BIT1) | (1<<GPIO_MUX_PULLUP_BIT))	// UART0, RX0, Input
 #define VAL_MUX_GPIO4_IOPORT	(1<<GPIO_MUX_PULLUP_BIT)	// GPIO4, input
 #define VAL_MUX_GPIO5_IOPORT	(1<<GPIO_MUX_PULLUP_BIT)	// GPIO5, input

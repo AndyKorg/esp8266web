@@ -31,6 +31,7 @@
 #include "web_iohw.h"
 #include "wifi_events.h"
 
+
 #ifdef USE_NETBIOS
 #include "netbios.h"
 #endif
@@ -44,23 +45,25 @@
 struct ping_option pingopt; // for test
 #endif
 
-#ifdef USE_WDRV
-#include "driver/wdrv.h"
-#endif
-
 #ifdef USE_CAPTDNS
 #include "captdns.h"
 #endif
 
 #ifdef USE_MODBUS
 #include "modbustcp.h"
+#include "mdbtab.h"
 #endif
 
-#ifdef UDP_TEST_PORT
-#include "udp_test_port.h"
+#ifdef USE_RS485DRV
+#include "driver/rs485drv.h"
+#include "mdbrs485.h"
 #endif
 
 #include "../include/customer_html.h"
+
+#ifdef USE_OVERLAY
+#include "overlay.h"
+#endif
 
 extern int rom_atoi(const char *);
 #define atoi rom_atoi
@@ -132,27 +135,55 @@ void ICACHE_FLASH_ATTR web_int_vars(TCP_SERV_CONN *ts_conn, uint8 *pcmd, uint8 *
 	else ifcmp("stop") 	web_conn->udata_stop = val;
 #ifdef USE_MODBUS
 	else ifcmp("mdb") {
-		cstr+=4;
-    	if((*cstr>='0')&&(*cstr<='9')) {
-    		uint32 x = ahextoul(cstr);
-        	if(x < 0x10000) {
+		cstr+=3;
+		if((cstr[1]>='0')&&(cstr[1]<='9')) {
+    		cstr++;
+    		uint32 addr = ahextoul(cstr);
+        	if(addr < 0x10000) {
         		if(cstr[-1]=='w') {
-        			if(WrMdbData((uint8 *)&val, x, 1) != 0) ;
+        			uint16 buf[32];
+        			os_memset(buf,0,sizeof(buf));
+        			WrMdbData((uint8 *)&buf, addr, str_array_w(pvar, buf, 32));
         		}
-        		else if(cstr[-1]=='d') WrMdbData((uint8 *)&val, x, 2);
+        		else if(cstr[-1]=='d') {
+        			uint32 buf[32];
+        			os_memset(buf,0,sizeof(buf));
+        			WrMdbData((uint8 *)&buf, addr, str_array(pvar, buf, 32) << 1);
+        		}
+        		else if(cstr[-1]=='b') {
+        			uint8 buf[32];
+        			os_memset(buf,0,sizeof(buf));
+        			WrMdbData((uint8 *)&buf, addr, str_array_b(pvar, buf, 32));
+        		}
+        		else if(cstr[-1]=='a') {
+        			uint32 i = 0;
+        			while(i < 32) {
+        				val = (pvar[i+1]<< 8) + pvar[i];
+        				if(WrMdbData((uint8 *)&val, addr++, 1) != 0) break;
+        				if(pvar[i] == 0 ||  pvar[i+1] == 0) break;
+        				i+=2;
+        			}
+        		}
+#if defined(USE_RS485DRV) && defined(MDB_RS485_MASTER)
+        		else if(cstr[-1]=='t' && addr < MDB_TRN_MAX) { // && rs485cfg.flg.b.master == 1) {
+        			str_array_w(pvar, &mdb_buf.trn[addr].id, 9);
+           			mdb_start_trn(addr);
+        		}
+#endif
         	}
     	}
+		else ifcmp("fini") mbd_fini(pvar);
 	}
 #endif
 	else ifcmp("sys_") {
 		cstr+=4;
 		ifcmp("restart") {
-			if(val == 12345) 	web_conn->web_disc_cb = (web_func_disc_cb)system_restart;
+			if(val == 12345) web_conn->web_disc_cb = (web_func_disc_cb)system_restart;
 		}
 		else ifcmp("reset") {
 			if(val == 12345) web_conn->web_disc_cb = (web_func_disc_cb)_ResetVector;
 		}
-		else ifcmp("ram") 	{ uint32 ptr = ahextoul(cstr+3)&0xfffffffc; *((uint32 *)ptr) = val; }
+		else ifcmp("ram") { uint32 *ptr = (uint32 *)(ahextoul(cstr+3)&(~3)); str_array(pvar, ptr, 32); }
 		else ifcmp("debug") 	system_set_os_print(val);
 #ifdef USE_LWIP_PING
 		else ifcmp("ping") {
@@ -247,7 +278,7 @@ void ICACHE_FLASH_ATTR web_int_vars(TCP_SERV_CONN *ts_conn, uint8 *pcmd, uint8 *
 	   			}
 	   		}
 			else ifcmp("url") {
-				if(new_tcp2uart_url(pvar))
+				if(new_tcp_client_url(pvar))
 					tcp2uart_start(syscfg.tcp2uart_port);
 			}
         	else ifcmp("reop") {
@@ -270,9 +301,7 @@ void ICACHE_FLASH_ATTR web_int_vars(TCP_SERV_CONN *ts_conn, uint8 *pcmd, uint8 *
 #ifdef USE_MODBUS
 	    else ifcmp("mdb_") {
 	    	cstr+=4;
-	    	ifcmp("port") {
-	    		if(mdb_tcp_init(val) == ERR_OK)	syscfg.mdb_remote_port = val;
-	    	}
+	    	ifcmp("port") mdb_tcp_start(val);
 	   		else ifcmp("twrec") {
 	   			syscfg.mdb_twrec = val;
 	   			if(mdb_tcp_servcfg != NULL) {
@@ -285,21 +314,24 @@ void ICACHE_FLASH_ATTR web_int_vars(TCP_SERV_CONN *ts_conn, uint8 *pcmd, uint8 *
 	   				mdb_tcp_servcfg->time_wait_cls = val;
 	   			}
 	   		}
+#ifndef USE_TCP2UART
+			else ifcmp("url") {
+				if(new_tcp_client_url(pvar))
+					mdb_tcp_start(syscfg.mdb_port);
+			}
+#endif
         	else ifcmp("reop") {
 	   			syscfg.cfg.b.mdb_reopen =  (val)? 1 : 0;
 	   			if(mdb_tcp_servcfg != NULL) {
 	   				mdb_tcp_servcfg->flag.srv_reopen = (val)? 1 : 0;
 	   			}
         	}
-	    }
+        	else ifcmp("id") {
+        		syscfg.mdb_id = val;
+        	}
+#if DEBUGSOO > 5
+        	else os_printf(" - none!\n");
 #endif
-#ifdef USE_WDRV
-	    else ifcmp("wdrv_") {
-	    	cstr+=5;
-	    	ifcmp("port") {
-				if(wdrv_init(val)) syscfg.wdrv_remote_port = val; // system_os_post(WDRV_TASK_PRIO, WDRV_SIG_INIT, val);
-				//if(syscfg.wdrv_remote_port != 0 && wdrv_host_port != 0 && wdrv_host_ip.addr != 0) wdrv_start(wdrv_sample_rate);
-	    	}
 	    }
 #endif
 		else ifcmp("overclk") 	syscfg.cfg.b.hi_speed_enable = (val)? 1 : 0;
@@ -428,8 +460,8 @@ void ICACHE_FLASH_ATTR web_int_vars(TCP_SERV_CONN *ts_conn, uint8 *pcmd, uint8 *
         	  // wificonfig.st.max_reconn = val;
           }
           else ifcmp("ssid") {
+    		  os_memset(wificonfig.st.config.ssid, 0, sizeof(wificonfig.st.config.ssid));
         	  if(pvar[0]!='\0'){
-        		  os_memset(wificonfig.st.config.ssid, 0, sizeof(wificonfig.st.config.ssid));
         		  int len = os_strlen(pvar);
         		  if(len > sizeof(wificonfig.st.config.ssid)) {
         			  len = sizeof(wificonfig.st.config.ssid);
@@ -465,32 +497,50 @@ void ICACHE_FLASH_ATTR web_int_vars(TCP_SERV_CONN *ts_conn, uint8 *pcmd, uint8 *
         ifcmp("save") uart_save_fcfg(val);
         else ifcmp("read") uart_read_fcfg(val);
         else {
-            int n = 0;
+#ifdef USE_RS485DRV
+        	// только UART1 !
+        	if(cstr[1] != '_' || cstr[0] != '1') {
+#if DEBUGSOO > 5
+            	os_printf(" - none! ");
+#endif
+            	return;
+        	}
+            int n = 1;
+#else
             if(cstr[1] != '_' || cstr[0]<'0' || cstr[0]>'1' ) {
 #if DEBUGSOO > 5
             	os_printf(" - none! ");
 #endif
+            	return;
             }
-            if(cstr[0] != '0') n++;
+            int n = cstr[0] & 1;
+#endif
             cstr += 2;
             ifcmp("baud") {
 //                UartDev.baut_rate = val;
                 uart_div_modify(n, UART_CLK_FREQ / val);
+#ifdef USE_TCP2UART
+                if(n == 0) uart0_set_tout();
+#endif
             }
             else ifcmp("parity") 	WRITE_PERI_REG(UART_CONF0(n), (READ_PERI_REG(UART_CONF0(n)) & (~UART_PARITY_EN)) | ((val)? UART_PARITY_EN : 0));
             else ifcmp("even") 	 	WRITE_PERI_REG(UART_CONF0(n), (READ_PERI_REG(UART_CONF0(n)) & (~UART_PARITY)) | ((val)? UART_PARITY : 0));
             else ifcmp("bits") 		WRITE_PERI_REG(UART_CONF0(n), (READ_PERI_REG(UART_CONF0(n)) & (~(UART_BIT_NUM << UART_BIT_NUM_S))) | ((val & UART_BIT_NUM)<<UART_BIT_NUM_S));
             else ifcmp("stop") 		WRITE_PERI_REG(UART_CONF0(n), (READ_PERI_REG(UART_CONF0(n)) & (~(UART_STOP_BIT_NUM << UART_STOP_BIT_NUM_S))) | ((val & UART_STOP_BIT_NUM)<<UART_STOP_BIT_NUM_S));
             else ifcmp("loopback") 	WRITE_PERI_REG(UART_CONF0(n), (READ_PERI_REG(UART_CONF0(n)) & (~UART_LOOPBACK)) | ((val)? UART_LOOPBACK : 0));
+#ifndef USE_RS485DRV
             else ifcmp("flow") {
             	if(n == 0) uart0_set_flow((val != 0));
             }
+#endif
         	else ifcmp("swap") {
         		int mask = PERI_IO_UART0_PIN_SWAP;
         		if(n != 0) mask = PERI_IO_UART1_PIN_SWAP;
         		if(val) PERI_IO_SWAP |= mask;
         		else  PERI_IO_SWAP &= ~mask;
+#ifndef USE_RS485DRV
         		if(n == 0) update_mux_uart0();
+#endif
         	}
             else ifcmp("rts_inv") set_uartx_invx(n, val, UART_RTS_INV);
             else ifcmp("dtr_inv") set_uartx_invx(n, val, UART_DTR_INV);
@@ -540,8 +590,8 @@ void ICACHE_FLASH_ATTR web_int_vars(TCP_SERV_CONN *ts_conn, uint8 *pcmd, uint8 *
 	            else ifcmp("sgs") 	{ sigma_delta_setup(n); set_sigma_duty_312KHz(val); }
 	            else ifcmp("sgc") 	sigma_delta_close(n);
 	            else ifcmp("od") 	reg_sct_bits(&GPIOx_PIN(n), GPIO_PIN_DRIVER, val);
-	            else ifcmp("pu") 	reg_sct_bits(get_addr_gpiox_mux(n), GPIO_MUX_PULLUP_BIT, val);
-	            else ifcmp("pd") 	reg_sct_bits(get_addr_gpiox_mux(n), GPIO_MUX_PULLDOWN_BIT, val);
+	            else ifcmp("pu") 	reg_sct_bits(get_addr_gpiox_mux(n), 1<<GPIO_MUX_PULLUP_BIT, val);
+	            else ifcmp("pd") 	reg_sct_bits(get_addr_gpiox_mux(n), 1<<GPIO_MUX_PULLDOWN_BIT, val);
     		}
     	}
     	else if(*cstr == '_') {
@@ -570,6 +620,71 @@ void ICACHE_FLASH_ATTR web_int_vars(TCP_SERV_CONN *ts_conn, uint8 *pcmd, uint8 *
     		};
     	}
     }
+#ifdef USE_RS485DRV
+	else ifcmp("rs485_") {
+   		cstr+=6;
+		ifcmp("baud") {
+			if(rs485cfg.baud != val) {
+				rs485cfg.baud = val;
+	       		rs485_drv_set_baud();
+			}
+       	}
+       	else ifcmp("timeout") {
+       		if(val == 0) val = 1;
+       		rs485cfg.timeout = val;
+       	}
+       	else ifcmp("pause") {
+       		rs485cfg.pause = val;
+       		rs485_drv_set_baud();
+       	}
+       	else ifcmp("parity") {
+       		val &= 0x03;
+       		if(rs485cfg.flg.b.parity != val) {
+       			rs485cfg.flg.b.parity = val;
+           		rs485_drv_set_baud();
+       		}
+       	}
+       	else ifcmp("pinre") {
+       		if(val > 15) val = 0x10;
+       		if(rs485cfg.flg.b.pin_ena != val) {
+       			rs485cfg.flg.b.pin_ena = val;
+       			rs485_drv_set_pins();
+       		}
+       	}
+       	else ifcmp("swap") {
+       		val &= 0x01;
+       		if(rs485cfg.flg.b.swap != val) {
+       			rs485cfg.flg.b.swap = val;
+       			rs485_drv_set_pins();
+       		}
+       	}
+       	else ifcmp("spdtw") {
+       		val &= 0x01;
+       		if(rs485cfg.flg.b.spdtw != val) {
+       			rs485cfg.flg.b.spdtw = val;
+       			rs485_drv_set_baud();
+       		}
+       	}
+#ifdef MDB_RS485_MASTER
+       	else ifcmp("master") rs485cfg.flg.b.master = val&1;
+#endif
+        else ifcmp("save") {
+        	uart_save_fcfg(1);
+        }
+        else ifcmp("read") {
+        	uart_read_fcfg(1);
+        }
+        else ifcmp("start") {
+        	rs485_drv_start();
+        }
+        else ifcmp("stop") {
+        	rs485_drv_stop();
+        }
+#if DEBUGSOO > 5
+        else os_printf(" - none!\n");
+#endif
+	}
+#endif
 #if 0
 	else ifcmp("call") {
 		call_func ptr = (call_func)(ahextoul(cstr+4)&0xfffffffc);
@@ -614,32 +729,28 @@ void ICACHE_FLASH_ATTR web_int_vars(TCP_SERV_CONN *ts_conn, uint8 *pcmd, uint8 *
     }
 #endif
 #endif
-#ifdef USE_WDRV
-	else ifcmp("wdrv_") {
-		cstr+=5;
-		ifcmp("freq") {
-			if(val > 0 && val <= MAX_SAMPLE_RATE)	wdrv_sample_rate = val;
+#ifdef USE_OVERLAY
+		else ifcmp("ovl") {
+			cstr += 3;
+			if(*cstr == 0) {
+				if (ovl_loader(pvar) == 0) {
+					if(CheckSCB(SCB_WEBSOC)) {
+						ovl_call(1);
+					}
+					else {
+						web_conn->web_disc_cb = (web_func_disc_cb)ovl_call; // адрес старта оверлея
+						web_conn->web_disc_par = 1; // параметр функции - инициализация
+					}
+				}
+			}
+			else if(*cstr == '$') {
+    			if(ovl_call != NULL) ovl_call(ahextoul(pvar));
+    		}
+			else if(*cstr == '@') {
+    			if(ovl_call != NULL) ovl_call((int)pvar);
+			}
 		}
-		else ifcmp("ip") {
-			val = ipaddr_addr(pvar);
-			if(val)	wdrv_host_ip.addr = val;
-			else wdrv_host_ip.addr = DEFAULT_WDRV_HOST_IP;
-		}
-		else ifcmp("port") {
-			if(val > 0 && val < 65536) wdrv_host_port = val;
-		}
-		else ifcmp("init") {
-			if(wdrv_init(val)) syscfg.wdrv_remote_port = val;
-			 // system_os_post(WDRV_TASK_PRIO, WDRV_SIG_INIT, val);
-		}
-		else ifcmp("start") {
-			if(val > 0 && val <= MAX_SAMPLE_RATE) wdrv_start(val); // system_os_post(WDRV_TASK_PRIO, WDRV_SIG_START, val);
-		}
-		else ifcmp("stop") {
-			wdrv_stop(); // system_os_post(WDRV_TASK_PRIO, WDRV_SIG_STOP, 0);
-		}
-	}
-#endif // USE_WDRV
+#endif
 #ifdef USE_TIMER0
 	else ifcmp("tinit") {
 #ifdef TIMER0_USE_NMI_VECTOR

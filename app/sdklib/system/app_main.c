@@ -26,8 +26,12 @@
 //=============================================================================
 // Define
 //-----------------------------------------------------------------------------
-#ifdef USE_MAX_IRAM
+#if defined(USE_MAX_IRAM) 
+ #if USE_MAX_IRAM == 48
 	#define Cache_Read_Enable_def() Cache_Read_Enable(0, 0, 0)
+ #else
+	#define Cache_Read_Enable_def() Cache_Read_Enable(0, 0, 1)
+ #endif
 #else
 	#define Cache_Read_Enable_def() Cache_Read_Enable(0, 0, 1)
 #endif
@@ -90,70 +94,29 @@ const uint8 esp_init_data_default[128] ICACHE_RODATA_ATTR = {
 // IRAM code
 //-----------------------------------------------------------------------------
 void call_user_start(void);
+#ifdef USE_FIX_QSPI_FLASH
 //=============================================================================
-// ROM-BIOS запускает код с адреса 0x40100000
-// при опцииях перезагрузки 'Jump Boot', если:
-// GPIO0 = "0", GPIO1 = "1", GPIO2 = "0" (boot mode:(2,x))
-/* перенесено в main-vectors.c
-void __attribute__((section(".UserEnter.text"))) call_user_start(void)
-{
-	asm volatile ("j call_user_start1");
-} */
-//=============================================================================
-// call_user_start() - вызов из заголовка, загрузчиком
-// ENTRY(call_user_start) in eagle.app.v6.ld
+// Инициализация QSPI и cache
 //-----------------------------------------------------------------------------
-#ifdef USE_FIX_QSPI_FLASH 
-void __attribute__((section(".entry.text"))) call_user_start1(void)
+static void set_qspi_flash_cache(void)
 {
-		SPI0_USER |= SPI_CS_SETUP; // +1 такт перед CS = 0x80000064
-		// SPI на 80 MHz
+	SPI0_USER |= SPI_CS_SETUP; // +1 такт перед CS = 0x80000064
+	// SPI на 80 MHz
 #if USE_FIX_QSPI_FLASH == 80
-		GPIO_MUX_CFG |= BIT(MUX_SPI0_CLK_BIT); // QSPI = 80 MHz
-		SPI0_CTRL = (SPI0_CTRL & SPI_CTRL_F_MASK) | SPI_CTRL_F80MHZ;
+	GPIO_MUX_CFG |= BIT(MUX_SPI0_CLK_BIT); // QSPI = 80 MHz
+	SPI0_CTRL = (SPI0_CTRL & SPI_CTRL_F_MASK) | SPI_CTRL_F80MHZ;
 #else  // SPI на 40 MHz
-		GPIO_MUX_CFG &= ~(1<< MUX_SPI0_CLK_BIT);
-		SPI0_CTRL = (SPI0_CTRL & SPI_CTRL_F_MASK) | SPI_CTRL_F40MHZ;
+	GPIO_MUX_CFG &= ~(1<< MUX_SPI0_CLK_BIT);
+	SPI0_CTRL = (SPI0_CTRL & SPI_CTRL_F_MASK) | SPI_CTRL_F40MHZ;
 #endif
-		flashchip->chip_size = 512*1024; // песочница для SDK в 512 килобайт flash
-		// Всё - включаем кеширование, далее можно вызывать процедуры из flash
-		Cache_Read_Enable_def();
-		// Инициализация
-		startup();
-		// Очистка стека и передача управления в ROM-BIOS
-		asm volatile (
-				"movi	a2, 1;"
-				"slli   a1, a2, 30;"
-				);
-		ets_run();
-}		
-#else
-void __attribute__((section(".entry.text"))) call_user_start1(void)
-{
-	    // Загрузка заголовка flash
-	    struct SPIFlashHead fhead;
-	    Cache_Read_Disable();
-		SPI0_USER |= SPI_CS_SETUP; // +1 такт перед CS
-		SPIRead(0, (uint32_t *)&fhead, sizeof(fhead));
-		// Установка размера Flash от 256Kbytes до 32Mbytes
-		// High four bits fhead.hsz.flash_size: 0 = 512K, 1 = 256K, 2 = 1M, 3 = 2M, 4 = 4M, ... 7 = 32M
-	    uint32 fsize = fhead.hsz.flash_size & 7;
-		if(fsize < 2) flashchip->chip_size = (8 >> fsize) << 16;
-		else flashchip->chip_size = (4 << fsize) << 16;
-	    uint32 fspeed = fhead.hsz.spi_freg;
-		// Установка:
-		// SPI Flash Interface (0 = QIO, 1 = QOUT, 2 = DIO, 0x3 = DOUT)
-		// and Speed QSPI: 0 = 40MHz, 1= 26MHz, 2 = 20MHz, ... = 80MHz
-		sflash_something(fspeed);
-		// SPIFlashCnfig(fhead.spi_interface & 3, (speed > 2)? 1 : speed + 2);
-		// SPIReadModeCnfig(5); // in ROM
-		// Всё - включаем кеширование, далее можно вызывать процедуры из flash
-		Cache_Read_Enable_def();
-		// Инициализация
-		startup();
-		// Передача управления ROM-BIOS
-		ets_run();
+#ifdef USE_ALTBOOT
+
+#endif
+	flashchip->chip_size = 512*1024; // песочница для SDK в 512 килобайт flash
+	// Всё - включаем кеширование, далее можно вызывать процедуры из flash
+	Cache_Read_Enable_def();
 }
+#else
 //-----------------------------------------------------------------------------
 // Установка скорости QSPI
 //  0 = 40MHz, 1 = 26MHz, 2 = 20MHz, >2 = 80MHz
@@ -179,7 +142,118 @@ void sflash_something(uint32 flash_speed)
 	}
 	SPI0_CTRL = xreg | value;
 }
+//=============================================================================
+// Инициализация QSPI и cache
+//-----------------------------------------------------------------------------
+static void set_qspi_flash_cache(void)
+{
+    // Загрузка заголовка flash
+    struct SPIFlashHead fhead;
+    Cache_Read_Disable();
+	SPI0_USER |= SPI_CS_SETUP; // +1 такт перед CS
+	SPIRead(0, (uint32_t *)&fhead, sizeof(fhead));
+	// Установка размера Flash от 256Kbytes до 32Mbytes
+	// High four bits fhead.hsz.flash_size: 0 = 512K, 1 = 256K, 2 = 1M, 3 = 2M, 4 = 4M, ... 7 = 32M
+    uint32 fsize = fhead.hsz.flash_size & 7;
+	if(fsize < 2) flashchip->chip_size = (8 >> fsize) << 16;
+	else flashchip->chip_size = (4 << fsize) << 16;
+    uint32 fspeed = fhead.hsz.spi_freg;
+	// Установка:
+	// SPI Flash Interface (0 = QIO, 1 = QOUT, 2 = DIO, 0x3 = DOUT)
+	// and Speed QSPI: 0 = 40MHz, 1= 26MHz, 2 = 20MHz, ... = 80MHz
+	sflash_something(fspeed);
+	// SPIFlashCnfig(fhead.spi_interface & 3, (speed > 2)? 1 : speed + 2);
+	// SPIReadModeCnfig(5); // in ROM
+	// Всё - включаем кеширование, далее можно вызывать процедуры из flash
+	Cache_Read_Enable_def();
+}
 #endif
+//=============================================================================
+// call_user_start() - вызывается из заголовка, загрузчиком
+// Default entry point:  ENTRY(call_user_start) in eagle.app.v6.ld
+//-----------------------------------------------------------------------------
+void call_user_start(void)
+{
+		// Инициализация QSPI
+		set_qspi_flash_cache();
+		// Инициализация
+		startup();
+		// Очистка стека и передача управления в ROM-BIOS
+		asm volatile (
+				"movi	a2, 1;"
+				"slli   a1, a2, 30;"
+				);
+		ets_run();
+}
+//=============================================================================
+// ROM-BIOS запускает код с адреса 0x40100000
+// при опцииях перезагрузки 'Jump Boot', если:
+// GPIO0 = "0", GPIO1 = "1", GPIO2 = "0" (boot mode:(2,x))
+// jump_boot() перенесено в main-vectors.c
+//-----------------------------------------------------------------------------
+#ifdef USE_RAPID_LOADER
+typedef void (*tloader)(uint32 addr);
+#else
+void ICACHE_FLASH_ATTR loader(uint32 addr)
+{
+	__asm__ __volatile__ (
+		"l32i.n	a3, a2, 0\n"	// SPIFlashHeader.head : bit0..7: = 0xE9, bit8..15: Number of segments, ...
+		"l32i.n	a7, a2, 4\n"	// Entry point
+		"extui	a3, a3, 8, 4\n" // Number of segments & 0x0F
+		"addi.n	a2, a2, 8\n"	// p SPIFlashHeadSegment
+		"j		4f\n"
+	"1:\n"
+		"l32i.n	a5, a2, 0\n"	// Memory offset
+		"addi.n	a4, a2, 8\n"	// p start data
+		"l32i.n	a2, a2, 4\n"	// Segment size
+		"srli	a2, a2, 2\n"	// size >> 2
+		"addx4	a2, a2, a4\n"	// + (size >> 2)
+		"j		3f\n"
+	"2:\n"
+		"l32i.n	a6, a4, 0\n"	// flash data
+		"addi.n	a4, a4, 4\n"
+		"s32i.n	a6, a5, 0\n"	// Memory data
+		"addi.n	a5, a5, 4\n"
+	"3:\n"
+		"bne	a2, a4, 2b\n"	// next SPIFlashHeadSegment != cur
+		"4:\n"
+		"addi.n	a3, a3, -1\n"	// Number of segments - 1
+		"bnei	a3, -1, 1b\n"	// end segments ?
+
+		"movi.n	a2, 1\n"
+		"slli	a1, a2, 30\n"	// стек в 0x400000000
+
+		"jx		a7\n" 			// callx0 a7"
+	);
+}
+#endif
+void call_jump_boot(void)
+{
+	ets_intr_lock();
+	ets_isr_mask(0x3FE); // запретить прерывания 1..9
+	IO_RTC_4 = 0; // Отключить блок WiFi (уменьшение потребления на время загрузки)
+	WDT_FEED = WDT_FEED_MAGIC;
+	SelectSpiFunction();
+	SPIFlashCnfig(5,4);
+	SPIReadModeCnfig(0);
+	set_qspi_flash_cache();
+	Wait_SPI_Idle(flashchip);
+#ifdef DEBUG_UART
+	os_printf("Jump Boot...\n");
+#endif
+#ifdef USE_RAPID_LOADER
+	tloader loader = (tloader)USE_RAPID_LOADER;
+	loader(USE_RAPID_LOADER+0x40);
+#else
+	loader(0x40200000); // загрузка с начала flash
+#endif
+}
+/*
+void restart(void)
+{
+	ets_uart_printf("Restart...");
+	call_jump_boot();
+}*/
 //=============================================================================
 // Стандартный вывод putc (UART0)
 //-----------------------------------------------------------------------------
@@ -339,7 +413,7 @@ void ICACHE_FLASH_ATTR read_macaddr_from_otp(uint8 *mac)
 	while(ptr < &_bss_end) *ptr++ = 0;
 }*/
 //-----------------------------------------------------------------------------
-// Тест конфигурации для WiFi (будет переделан)
+// Тест конфигурации для WiFi
 //-----------------------------------------------------------------------------
 void ICACHE_FLASH_ATTR tst_cfg_wifi(void)
 {
@@ -368,12 +442,12 @@ void ICACHE_FLASH_ATTR tst_cfg_wifi(void)
 	}
 	wifi_config->field_880 = 0;
 	wifi_config->field_884 = 0;
-	g_ic.c[257] = 0; // ?
 
-	if(wifi_config->field_316 > 6) wifi_config->field_316 = 1;
-	if(wifi_config->field_169 > 2) wifi_config->field_169 = 0; // +169
-	wifi_config->phy_mode &= 3;
-	if(wifi_config->phy_mode == 0 ) wifi_config->phy_mode = 3; // phy_mode
+//	g_ic.c[257] = 0; // ?
+
+	if(wifi_config->field_316 >= 6) wifi_config->field_316 = 1;
+	if(wifi_config->field_169 >= 2) wifi_config->field_169 = 0; // +169
+	if(wifi_config->phy_mode >= 4 || wifi_config->phy_mode == 0 ) wifi_config->phy_mode = 3; // phy_mode
 }
 //=============================================================================
 //-----------------------------------------------------------------------------
@@ -419,7 +493,8 @@ void ICACHE_FLASH_ATTR startup_uart_init(void)
 //-----------------------------------------------------------------------------
 void ICACHE_FLASH_ATTR startup(void)
 {
-	ets_set_user_start(call_user_start); // установить адрес для возможной перезагрузки сразу в call_user_start()
+	ets_isr_mask(0x3FE); // запретить прерывания 1..9
+	ets_set_user_start(jump_boot); // установить адрес для возможной перезагрузки по доп. веткам ROM-BIOS
 	// cтарт на модуле с кварцем в 26MHz, а ROM-BIOS выставил 40MHz?
 	if(rom_i2c_readReg(103,4,1) != 136) { // 8: 40MHz, 136: 26MHz
 		if(get_sys_const(sys_const_crystal_26m_en) == 1) { // soc_param0: 0: 40MHz, 1: 26MHz, 2: 24MHz
@@ -440,6 +515,13 @@ void ICACHE_FLASH_ATTR startup(void)
 	while(ptr < &_bss_end) *ptr++ = 0;
 //	user_init_flag = false; // итак всё равно false из-за обнуления данных в сегменте
 	//
+#if defined(TIMER0_USE_NMI_VECTOR)
+	__asm__ __volatile__ (
+			"movi	a2, 0x401\n"
+			"slli	a2, a2, 20\n" // a2 = 0x40100000
+			"wsr.vecbase	a2\n"
+			);
+#endif
 	_xtos_set_exception_handler(EXCCAUSE_UNALIGNED, default_exception_handler);
 	_xtos_set_exception_handler(EXCCAUSE_ILLEGAL, default_exception_handler);
 	_xtos_set_exception_handler(EXCCAUSE_INSTR_ERROR, default_exception_handler);
@@ -451,8 +533,7 @@ void ICACHE_FLASH_ATTR startup(void)
 	_xtos_set_exception_handler(EXCCAUSE_LOAD_PROHIBITED, default_exception_handler);
 	_xtos_set_exception_handler(EXCCAUSE_STORE_PROHIBITED, default_exception_handler);
 	_xtos_set_exception_handler(EXCCAUSE_PRIVILEGED, default_exception_handler);
-	// Тест системных данных в RTС
-//	if(rtc_get_reset_reason()==2) {};
+	//
 #if	DEF_SDK_VERSION < 1400
 	if((RTC_RAM_BASE[0x60>>2]>>16) > 4) { // проверка опции phy_rfoption = deep_sleep_option
 #ifdef DEBUG_UART
@@ -479,8 +560,8 @@ void ICACHE_FLASH_ATTR startup(void)
 	read_macaddr_from_otp(info.st_mac);
 	wifi_softap_cacl_mac(info.ap_mac, info.st_mac);
 	// начальный IP, mask, gw для AP
-	info.ap_gw = info.ap_ip = 0x104A8C0; // ip 192.168.4.1
-	info.ap_mask = 0x00FFFFFF; // 255.255.255.0
+	info.ap_gw = info.ap_ip = DEFAULT_SOFTAP_IP; // 0x104A8C0; ip 192.168.4.1
+	info.ap_mask = DEFAULT_SOFTAP_MASK; // 0x00FFFFFF; 255.255.255.0
 	ets_timer_init();
 	lwip_init();
 //	espconn_init(); // данный баг не используется
@@ -505,7 +586,7 @@ void ICACHE_FLASH_ATTR startup(void)
 	uint8 * buf = os_malloc(SIZE_SAVE_SYS_CONST);
 	spi_flash_read(esp_init_data_default_addr,(uint32 *)buf, SIZE_SAVE_SYS_CONST); // esp_init_data_default.bin + ???
 #if DEF_SDK_VERSION >= 1410
-	if(buf[112] == 3) g_ic.c[471] = 1;
+	if(buf[112] == 3) g_ic.c[471] = 1; // esp_init_data_default: freq_correct_en[112]
 	else g_ic.c[471] = 0;
 #endif
 	buf[0xf8] = 0;
@@ -514,7 +595,7 @@ void ICACHE_FLASH_ATTR startup(void)
 	// **
 	// user_rf_pre_init(); // не использется, т.к. мождно вписать что угодно и тут :)
     //	system_phy_set_powerup_option(0);
-	//	system_phy_set_rfoption(0);
+	//	system_phy_set_rfoption(1);
 	// **
 #elif DEF_SDK_VERSION >= 1300
 	uint8 *buf = (uint8 *)os_malloc(256); // esp_init_data_default.bin
@@ -531,7 +612,7 @@ void ICACHE_FLASH_ATTR startup(void)
 		ets_memcpy(buf, esp_init_data_default, esp_init_data_default_size);
 	}
 //	system_restoreclock(); // STARTUP_CPU_CLK
-	init_wifi(buf, info.st_mac); // инициализация оборудования WiFi
+	init_wifi(buf, info.st_mac); // инициализация WiFi
 #if DEF_SDK_VERSION >= 1400
 	if(buf[0xf8] == 1 || phy_rx_gain_dc_flag == 1) { // сохранить новые калибровки RF/VCC33 ?
 #ifdef DEBUG_UART
@@ -544,7 +625,39 @@ void ICACHE_FLASH_ATTR startup(void)
 	//
 #if DEF_SDK_VERSION >= 1400 // (SDK 1.4.0)
 	system_rtc_mem_read(0, &rst_if, sizeof(rst_if));
-//	os_printf("RTC_MEM(0) = %u\n", rst_if.reason);
+//	os_printf("RTC_MEM(0) = %u,%u,%p \n", rst_if.reason, IO_RTC_SCRATCH0, RTC_RAM_BASE[0x78>>2]);
+#if DEF_SDK_VERSION >= 1520
+	{
+		uint32 reset_reason = IO_RTC_SCRATCH0;
+		if(reset_reason >= REASON_EXCEPTION_RST && reset_reason < REASON_DEEP_SLEEP_AWAKE) {
+			// reset_reason == REASON_EXCEPTION_RST, REASON_SOFT_WDT_RST, REASON_SOFT_RESTART, REASON_DEEP_SLEEP_AWAKE
+			TestStaFreqCalValInput = RTC_RAM_BASE[0x78>>2]>>16;
+			chip_v6_set_chan_offset(1, TestStaFreqCalValInput);
+		}
+		else {
+			TestStaFreqCalValInput = 0;
+			RTC_RAM_BASE[0x78>>2] &= 0xFFFF;
+			if(reset_reason == REASON_DEFAULT_RST) {
+				reset_reason = rtc_get_reset_reason();
+				if(reset_reason == 1) { // =1 - ch_pd
+					ets_memset(&rst_if, 0, sizeof(rst_if)); // rst_if.reason = REASON_DEFAULT_RST
+				}
+				else if(reset_reason == 2) { // =2 - reset
+					if(rst_if.reason != REASON_DEEP_SLEEP_AWAKE
+					 ||	rst_if.epc1 != 0
+					 || rst_if.excvaddr != 0) {
+						ets_memset(&rst_if, 0, sizeof(rst_if));
+						rst_if.reason = REASON_EXT_SYS_RST;
+						RTC_MEM(0) = REASON_EXT_SYS_RST;
+					}
+				}
+			}
+			else if(reset_reason > REASON_EXT_SYS_RST) {
+				ets_memset(&rst_if, 0, sizeof(rst_if)); // rst_if.reason = REASON_DEFAULT_RST
+			}
+		}
+	}
+#else
 	if (rst_if.reason >= REASON_EXCEPTION_RST && rst_if.reason < REASON_DEEP_SLEEP_AWAKE) { // >= 2 < 5
 		// 2,3,4 REASON_EXCEPTION_RST, REASON_SOFT_WDT_RST, REASON_SOFT_RESTART
 		TestStaFreqCalValInput = RTC_RAM_BASE[0x78>>2]>>16; // *((volatile uint32 *)0x60001078) >> 16
@@ -558,14 +671,13 @@ void ICACHE_FLASH_ATTR startup(void)
 			rst_if.reason = REASON_EXT_SYS_RST; // = 6
 		}
 //		else if(rst_if.reason == REASON_WDT_RST && rtc_get_reset_reason() == 1) rst_if.reason = REASON_DEFAULT_RST;
-
 	}
 #endif
-
+	//
 #ifdef DEBUG_UART
-	//
 	os_print_reset_error(); // вывод фатальных ошибок, вызвавших рестарт. см. в модуле wdt
-	//
+#endif
+	RTC_MEM(0) = 0; //	system_rtc_mem_write(0, &rst_if, sizeof(rst_if));
 #endif
 //	DPORT_BASE[0] = (DPORT_BASE[0] & 0x60) | 0x0F; // ??
 #if DEF_SDK_VERSION >= 1119 // (SDK 1.1.1)

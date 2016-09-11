@@ -1,8 +1,8 @@
 # MinEspSDK (meSDK)
-Minimalist SDK on ESP8266ex v1.3.0
+Minimalist SDK on ESP8266ex v1.5.4
 ---
 
-A complete set of Wi-Fi and LwIP functions.<br>
+A complete set of Wi-Fi and [LwIP](http://savannah.nongnu.org/projects/lwip/) functions.<br>
 Имеет полный набор функций работы с WiFi и UDP/TCP (LwIP ver1.4.0).<br>
 Данная сборка не содержит espconn и SSL.<br>
 Проектируется для работы с датчиками и будет содержать расширения для быстрого<br> 
@@ -17,19 +17,20 @@ A complete set of Wi-Fi and LwIP functions.<br>
 через 540 мс. Основное время занимает инициализации SDK в части WiFi.<br>
 Далее полудуплексный трафик TCP составляет более 1-го Мегабайта в секунду.<br>    
 
-From Espressif SDK ver 1.3.0 used only:<br> 
-libpp.a, libwpa.a, libnet80211.a, parts libphy.a, user_interface.o<br>
-Из Espressif SDK ver 1.3.0 используются только описанные части.<br>
+From [Espressif SDK](http://bbs.espressif.com/) ver 1.5.4 used only:<br> 
+libpp.a, libwpa.a, libcrypto.a, libnet80211.a, parts libphy.a, user_interface.o<br>
+Из [Espressif SDK](http://bbs.espressif.com/) ver 1.5.4 используются только описанные части.<br>
 Остальные части даны с исходными кодами.<br>
+LwIP based on [Open source LWIP for ESP_IOT_SDK_V1.5.2](http://bbs.espressif.com/viewtopic.php?f=46&t=1221).<br>
 
 Supported options 48 kbytes IRAM.<br>
-Supported 'Rapid Loader' and Flash 512 кbytes - 16 Mbytes.<br>
-Поддержка расширенной памяти IRAM в 48 килобайт,<br>
+Supported '[Rapid Loader](https://github.com/pvvx/Rapid_Loader/)' and Flash 512 кbytes - 16 Mbytes.<br>
+Поддержка расширенной памяти IRAM в 48 килобайт (опция USE_MAX_IRAM 48),<br>
 Flash от 512 килобайт до 16 Мегабайт и ускоряющего загрузку SDK 'лоадера'.<br>
 
-Free IRAM : 29 kbytes<br>
-Free Heap : 52 kbytes<br>
-Total Free RAM : 81 kbytes<br>
+Free IRAM : 12 or 28 kbytes (option USE_MAX_IRAM) <br>
+Free Heap : 55 kbytes<br>
+Total Free RAM : 83 kbytes<br>
 
 Options programming Flash:<br> 
 

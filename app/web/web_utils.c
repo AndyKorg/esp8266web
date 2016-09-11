@@ -177,22 +177,90 @@ uint8 * ICACHE_FLASH_ATTR cmpcpystr(uint8 *pbuf, uint8 *pstr, uint8 a, uint8 b, 
             }while(1);
 }
 /******************************************************************************
- * FunctionName : strtoip (192.168.4.1 = 0x01040A8C0)
+ * FunctionName : str_array
+ * Набирает из строки s массив слов в buf в кол-ве до max_buf
+ * возврат - кол-во переменных в строке
+ * Разделитель переменных в строке ','
+ * Если нет переменной, то пропускает изменение в buf
+ * Примеры:
+ * Строка "1,2,3,4" -> buf = 0x01 0x02 0x03 0x04
+ * Строка "1,,3," -> buf = 0x01 (не изменено) 0x03 (не изменено)
 *******************************************************************************/
-/* uint32 ICACHE_FLASH_ATTR strtoip(uint8 *s)
+uint32 ICACHE_FLASH_ATTR str_array(uint8 *s, uint32 *buf, uint32 max_buf)
 {
-	uint32 val = 0;
-	uint8 pbuf[4];
-	s = cmpcpystr(pbuf, s, '\0', '.', 4);
-	val = atoi(pbuf)&0xFF;
-	s = cmpcpystr(pbuf, s, '.', '.', 4);
-	val += (atoi(pbuf)&0xFF) << 8;
-	s = cmpcpystr(pbuf, s, '.', '.', 4);
-	val += (atoi(pbuf)&0xFF) << 16;
-	s = cmpcpystr(pbuf, s, '.', ' ', 4);
-	val += (atoi(pbuf)&0xFF) << 24;
-	return val;
-} */
+	uint32 ret = 0;
+	uint8 *sval = NULL;
+	while(max_buf > ret) {
+		if(sval == NULL) {
+			if (*s == '-' && s[1] >= '0' && s[1] <= '9') {
+				sval = s;
+				s++;
+			}
+			else if (*s >= '0' && *s <= '9') sval = s;
+		}
+		if(*s == ',' || *s <= ')') {
+			if(sval != NULL) {
+				*buf = ahextoul(sval);
+				sval = NULL;
+			}
+			buf++;
+			ret++;
+			if(*s < ')') return ret;
+		}
+		s++;
+	}
+	return ret;
+}
+uint32 ICACHE_FLASH_ATTR str_array_w(uint8 *s, uint16 *buf, uint32 max_buf)
+{
+	uint32 ret = 0;
+	uint8 *sval = NULL;
+	while(max_buf > ret) {
+		if(sval == NULL) {
+			if (*s == '-' && s[1] >= '0' && s[1] <= '9') {
+				sval = s;
+				s++;
+			}
+			else if (*s >= '0' && *s <= '9') sval = s;
+		}
+		if(*s == ',' || *s <= ')') {
+			if(sval != NULL) {
+				*buf = ahextoul(sval);
+				sval = NULL;
+			}
+			buf++;
+			ret++;
+			if(*s < ')') return ret;
+		}
+		s++;
+	}
+	return ret;
+}
+uint32 ICACHE_FLASH_ATTR str_array_b(uint8 *s, uint8 *buf, uint32 max_buf)
+{
+	uint32 ret = 0;
+	uint8 *sval = NULL;
+	while(max_buf > ret) {
+		if(sval == NULL) {
+			if (*s == '-' && s[1] >= '0' && s[1] <= '9') {
+				sval = s;
+				s++;
+			}
+			else if (*s >= '0' && *s <= '9') sval = s;
+		}
+		if(*s == ',' || *s == '.' || *s <= ')') {
+			if(sval != NULL) {
+				*buf = ahextoul(sval);
+				sval = NULL;
+			}
+			buf++;
+			ret++;
+			if(*s < ')') return ret;
+		}
+		s++;
+	}
+	return ret;
+}
 /******************************************************************************
  * FunctionName : strtmac
 *******************************************************************************/
@@ -386,7 +454,7 @@ static const uint8_t base64map[128] ICACHE_RODATA_ATTR =
 //=============================================================================
 bool ICACHE_FLASH_ATTR base64decode(const uint8 *in, int len, uint8_t *out, int *outlen)
 {
-	uint8 *map = UartDev.rcv_buff.pRcvMsgBuff;
+	uint8 *map = (uint8 *)UartDev.rcv_buff.pRcvMsgBuff;
 	ets_memcpy(map, base64map, 128);
     int g, t, x, y, z;
     uint8_t c;
@@ -472,7 +540,17 @@ void ICACHE_FLASH_ATTR print_hex_dump(uint8 *buf, uint32 len, uint8 k)
 		ets_printf((uint8 *)&ss[0], *ptr++);
 	}
 }
+//=============================================================================
+#define LowerCase(a) ((('A' <= a) && (a <= 'Z')) ? a + 32 : a)
 
+char* ICACHE_FLASH_ATTR word_to_lower_case(char* text) {
+	for(; *text ==' '; text++);
+	char* p = text;
+	for (; *p >= ' '; ++p) {
+		*p = LowerCase(*p);
+	}
+	return text;
+}
 #if 0
 //=============================================================================
 /* char UpperCase(char ch) {

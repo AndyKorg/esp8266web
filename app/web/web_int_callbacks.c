@@ -28,6 +28,7 @@
 #include "sys_const_utils.h"
 #include "wifi_events.h"
 
+
 #ifdef USE_NETBIOS
 #include "netbios.h"
 #endif
@@ -36,26 +37,38 @@
 #include "sntp.h"
 #endif
 
-#ifdef USE_WDRV
-#include "driver/wdrv.h"
-#endif
-
 #ifdef USE_CAPTDNS
 #include "captdns.h"
 #endif
 
 #ifdef USE_MODBUS
 #include "modbustcp.h"
+#include "mdbtab.h"
 #endif
 
 #include "../include/customer_html.h"
+
+#ifdef USE_RS485DRV
+#include "driver/rs485drv.h"
+#endif
+
+#ifdef USE_OVERLAY
+#include "overlay.h"
+#endif
 
 /*extern uint32 adc_rand_noise;
 extern uint32 dpd_bypass_original;
 extern uint16 phy_freq_offset
 extern uint8 phy_in_most_power;
 extern uint8 rtc_mem_check_fail;
+/*extern uint32 adc_rand_noise;
+extern uint32 dpd_bypass_original;
+extern uint16 phy_freq_offset
+extern uint8 phy_in_most_power;
+extern uint8 rtc_mem_check_fail;
 extern uint8 phy_set_most_tpw_disbg;
+
+extern uint8 phy_set_most_tpw_index; // uint32? */
 extern uint8 phy_set_most_tpw_index; // uint32? */
 extern uint8 phy_in_vdd33_offset;
 
@@ -66,7 +79,7 @@ extern uint8 phy_in_vdd33_offset;
 //#define ifcmp(a)   if(!os_memcmp((void*)cstr, a , sizeof(a)))
 #define ifcmp(a)  if(rom_xstrcmp(cstr, a))
 
-#define TEST_SEND_WAVE
+
 
 #ifdef TEST_SEND_WAVE
 //-------------------------------------------------------------------------------
@@ -128,24 +141,6 @@ void ICACHE_FLASH_ATTR web_test_adc(TCP_SERV_CONN *ts_conn)
 #endif // TEST_SEND_WAVE
 //===============================================================================
 // web_test_adc()
-//-------------------------------------------------------------------------------
-uint64 ICACHE_FLASH_ATTR get_mac_time(void)
-{
-	union {
-		volatile uint32 dw[2];
-		uint64 dd;
-	}ux;
-	volatile uint32 * ptr = (volatile uint32 *)MAC_TIMER64BIT_COUNT_ADDR;
-	ux.dw[0] = ptr[0];
-	ux.dw[1] = ptr[1];
-	if(ux.dw[1] != ptr[1]) {
-		ux.dw[0] = ptr[0];
-		ux.dw[1] = ptr[1];
-	}
-	return ux.dd;
-}
-//===============================================================================
-// WiFi Saved Aps XML
 //-------------------------------------------------------------------------------
 void ICACHE_FLASH_ATTR wifi_aps_xml(TCP_SERV_CONN *ts_conn)
 {
@@ -269,6 +264,48 @@ void ICACHE_FLASH_ATTR web_ProbeRequest_xml(TCP_SERV_CONN *ts_conn)
     SetNextFunSCB(web_ProbeRequest_xml);
     return;
 }
+#ifdef USE_MODBUS
+//===============================================================================
+// RAM hexdump
+//-------------------------------------------------------------------------------
+void ICACHE_FLASH_ATTR web_modbus_xml(TCP_SERV_CONN *ts_conn)
+{
+	WEB_SRV_CONN *web_conn = (WEB_SRV_CONN *) ts_conn->linkd;
+	while(web_conn->msgbuflen + 24 <= web_conn->msgbufsize) {
+	    if(web_conn->udata_start < web_conn->udata_stop) {
+	    	uint16 val16;
+	    	if(RdMdbData((uint8 *)&val16, web_conn->udata_start, 1) != 0) tcp_puts_fd("<m%u>?</m%u>", web_conn->udata_start, web_conn->udata_start);
+	    	else {
+		    	if(ts_conn->flag.user_option2) {
+		    		if(ts_conn->flag.user_option1) {
+			    		tcp_puts_fd("<m%u>0x%04x</m%u>", web_conn->udata_start, val16, web_conn->udata_start);
+		    		}
+				    else {
+			    		tcp_puts_fd("<m%u>%04x</m%u>", web_conn->udata_start, val16, web_conn->udata_start);
+				    };
+		    	}
+		    	else {
+			    	if(ts_conn->flag.user_option1) {
+			    		tcp_puts_fd("<m%u>%d</m%u>", web_conn->udata_start, (sint32)((sint16)val16), web_conn->udata_start);
+			    	}
+			    	else {
+			    		tcp_puts_fd("<m%u>%u</m%u>", web_conn->udata_start, val16, web_conn->udata_start);
+			    	};
+		    	};
+	    	};
+	    	web_conn->udata_start++;
+	    }
+	    else {
+		    ClrSCB(SCB_RETRYCB);
+		    return;
+	    }
+	}
+	// repeat in the next call ...
+    SetSCB(SCB_RETRYCB);
+    SetNextFunSCB(web_modbus_xml);
+    return;
+}
+#endif
 //===============================================================================
 // RAM hexdump
 //-------------------------------------------------------------------------------
@@ -436,7 +473,7 @@ void ICACHE_FLASH_ATTR get_new_url(TCP_SERV_CONN *ts_conn)
 		else tcp_puts(IPSTR, IP2STR(&ip));
 	};
 #else
-	if(ip == 0) ip = 0x0104A8C0;
+	if(ip == 0) ip = WEB_DEFAULT_SOFTAP_IP; // 0x0104A8C0
 	tcp_puts(IPSTR, IP2STR(&ip));
 #endif
 	if(syscfg.web_port != 80) tcp_puts(":%u", syscfg.web_port);
@@ -447,10 +484,10 @@ void ICACHE_FLASH_ATTR get_new_url(TCP_SERV_CONN *ts_conn)
  * Parameters   : struct TCP_SERV_CONN
  * Returns      : none
  ******************************************************************************/
-void ICACHE_FLASH_ATTR web_int_callback(TCP_SERV_CONN *ts_conn)
+void ICACHE_FLASH_ATTR web_int_callback(TCP_SERV_CONN *ts_conn, uint8 *cstr)
 {
     WEB_SRV_CONN *web_conn = (WEB_SRV_CONN *)ts_conn->linkd;
-        uint8 *cstr = &web_conn->msgbuf[web_conn->msgbuflen];
+//        uint8 *cstr = &web_conn->msgbuf[web_conn->msgbuflen];
         {
            uint8 *vstr = os_strchr(cstr, '=');
            if(vstr != NULL) {
@@ -468,6 +505,30 @@ void ICACHE_FLASH_ATTR web_int_callback(TCP_SERV_CONN *ts_conn)
             cstr+=4;
             web_conn->udata_start&=~3;
             ifcmp("ram") tcp_puts("0x%08x", *((uint32*)web_conn->udata_start));
+#ifdef USE_MODBUS
+            else ifcmp("mdb") {
+            	web_conn->udata_start &= 0xffff;
+      			web_conn->udata_stop &= 0xffff;
+      			if(web_conn->udata_stop <= web_conn->udata_start) web_conn->udata_stop = web_conn->udata_start + 10;
+      			if(cstr[3] == 'h')	{
+      				ts_conn->flag.user_option1 = 0;
+      				ts_conn->flag.user_option2 = 1;
+      			}
+      			else if(cstr[3] == 'x')	{
+      				ts_conn->flag.user_option1 = 1;
+      				ts_conn->flag.user_option2 = 1;
+      			}
+      			else if(cstr[3] == 's')	{
+      				ts_conn->flag.user_option1 = 1;
+      				ts_conn->flag.user_option2 = 0;
+      			}
+      			else {
+      				ts_conn->flag.user_option1 = 0;
+      				ts_conn->flag.user_option2 = 0;
+      			}
+      			web_modbus_xml(ts_conn);
+            }
+#endif
             else tcp_put('?');
             web_conn->udata_start += 4;
         }
@@ -475,38 +536,68 @@ void ICACHE_FLASH_ATTR web_int_callback(TCP_SERV_CONN *ts_conn)
         else ifcmp("mdb") {
         	if(cstr[3]=='_') {
             	cstr+=4;
-
+            	struct tcp_pcb *pcb = NULL;
+            	if(mdb_tcp_conn != NULL) pcb = mdb_tcp_conn->pcb;
             	ifcmp("remote") {
-            			if(mdb_tcp_servcfg != NULL && mdb_tcp_servcfg->conn_links != NULL && mdb_tcp_servcfg->conn_links->pcb) {
-            			struct tcp_pcb *pcb = mdb_tcp_servcfg->conn_links->pcb;
-            			tcp_puts(IPSTR ":%d", IP2STR(&(pcb->remote_ip.addr)), pcb->remote_port);
-            		}
+       				if(pcb != NULL) {
+       					tcp_puts(IPSTR ":%d", IP2STR(&(pcb->remote_ip.addr)), pcb->remote_port);
+       				}
             		else tcp_strcpy_fd("none");
             	}
+#ifndef USE_TCP2UART
             	else ifcmp("host") {
-        			if(mdb_tcp_servcfg != NULL && mdb_tcp_servcfg->conn_links != NULL && mdb_tcp_servcfg->conn_links->pcb) {
-            			struct tcp_pcb *pcb = mdb_tcp_servcfg->conn_links->pcb;
+        			if(pcb != NULL) {
             			tcp_puts(IPSTR ":%d", IP2STR(&(pcb->local_ip.addr)), pcb->local_port);
             		}
             		else tcp_strcpy_fd("closed");
             	}
+#endif
+#ifdef USE_RS485DRV
+            	else ifcmp("trn") {
+            		if(cstr[3]=='s') tcp_puts("%u", MDB_TRN_MAX);
+            		else if(cstr[3]=='a') tcp_puts("%u", MDB_BUF_MAX);
+                	else tcp_put('?');
+            	}
+#endif
             	else tcp_put('?');
         	}
-        	else {
+        	else if(cstr[3]=='a') {
+            	cstr+=4;
+        		if((*cstr>='0')&&(*cstr<='9')) {
+        			uint32 addr = ahextoul(cstr);
+        			if(addr < 0x10000) {
+        				uint32 val = 0;
+        				uint32 i = 16;
+        				while(i--) {
+        					if(RdMdbData((uint8 *)&val, addr++, 1) != 0) break;
+        					if(val&0xFF) tcp_put(val);
+        					else break;
+        					if(val>>8) tcp_put(val>>8);
+        					else break;
+        				}
+        			}
+        		}
+        		else tcp_put('?');
+        	}
+        	else if(cstr[3]=='u' || cstr[3]=='s' || cstr[3]=='h' || cstr[3]=='x') {
         		cstr+=5;
         		if((*cstr>='0')&&(*cstr<='9')) {
         			uint32 addr = ahextoul(cstr);
-        			if((cstr[-1]=='u' || cstr[-1]=='d') && (addr < 0x10000)) {
+        			if(addr < 0x10000) {
         				uint32 val = 0;
-        				if(cstr[-2]=='w') {
+        				if(cstr[-1]=='w') {
         					if(RdMdbData((uint8 *)&val, addr, 1) != 0) tcp_put('?');
-        					else if (cstr[-1]=='u') tcp_puts("%u", val);
-        					else if (cstr[-1]=='s') tcp_puts("%d", val);
+        					else if (cstr[-2]=='u') tcp_puts("%u", val);
+        					else if (cstr[-2]=='s') tcp_puts("%d", (val&0x8000)? val | 0xFFFF0000 : val);
+        					else if (cstr[-2]=='h') tcp_puts("%04x", val);
+        					else if (cstr[-2]=='x') tcp_puts("0x%04x", val);
         				}
-        				else if(cstr[-2]=='d') {
+        				else if(cstr[-1]=='d') {
         					if(RdMdbData((uint8 *)&val, addr, 2) != 0) tcp_put('?');
-        					else if (cstr[-1]=='u') tcp_puts("%u", val);
-        					else if (cstr[-1]=='s') tcp_puts("%d", val);
+        					else if (cstr[-2]=='u') tcp_puts("%u", val);
+        					else if (cstr[-2]=='s') tcp_puts("%d", val);
+        					else if (cstr[-2]=='h') tcp_puts("%08x", val);
+        					else if (cstr[-2]=='x') tcp_puts("0x%08x", val);
         				}
         				else tcp_put('?');
         			}
@@ -541,6 +632,7 @@ void ICACHE_FLASH_ATTR web_int_callback(TCP_SERV_CONN *ts_conn)
         	  tcp_puts("0x%08x%08x", ux.dw[1], ux.dw[0]);
           }
           else ifcmp("vdd33") tcp_puts("%u", readvdd33()); // system_get_vdd33() phy_get_vdd33();
+          else ifcmp("vdd") tcp_puts("%u", system_get_vdd33()); //  phy_get_vdd33();
           else ifcmp("wdt") tcp_puts("%u", ets_wdt_get_mode());
           else ifcmp("res_event") tcp_puts("%u", rtc_get_reset_reason()); // 1 - power/ch_pd, 2 - reset, 3 - software, 4 - wdt ...
           else ifcmp("rst") tcp_puts("%u", system_get_rst_info()->reason);
@@ -549,8 +641,8 @@ void ICACHE_FLASH_ATTR web_int_callback(TCP_SERV_CONN *ts_conn)
 //          else ifcmp("test") tcp_puts("%d", cal_rf_ana_gain() ); //
           else ifcmp("reset") web_conn->web_disc_cb = (web_func_disc_cb)_ResetVector;
           else ifcmp("restart") web_conn->web_disc_cb = (web_func_disc_cb)system_restart;
-          else ifcmp("ram") tcp_puts("0x%08x", *((uint32 *)(ahextoul(cstr+3)&0xFFFFFFFC)));
-          else ifcmp("rdec") tcp_puts("%d", *((uint32 *)(ahextoul(cstr+4)&0xFFFFFFFC)));
+          else ifcmp("ram") tcp_puts("0x%08x", *((uint32 *)(ahextoul(cstr+3)&(~3))));
+          else ifcmp("rdec") tcp_puts("%d", *((uint32 *)(ahextoul(cstr+4)&(~3))));
 //          else ifcmp("reg") tcp_puts("0x%08x", IOREG(ahextoul(cstr+3)));
           else ifcmp("ip") {
 /*        	  uint32 cur_ip = 0;
@@ -569,7 +661,6 @@ void ICACHE_FLASH_ATTR web_int_callback(TCP_SERV_CONN *ts_conn)
         	  else tcp_puts("%u", read_sys_const(ahextoul(cstr)));
           }
           else ifcmp("ucnst_") tcp_puts("%u", read_user_const(ahextoul(cstr+6)));
-          else ifcmp("vdd") tcp_puts("%u", system_get_vdd33()); //  phy_get_vdd33();
 #ifdef USE_NETBIOS
           else ifcmp("netbios") {
        		  if(syscfg.cfg.b.netbios_ena) tcp_strcpy(netbios_name);
@@ -595,8 +686,8 @@ void ICACHE_FLASH_ATTR web_int_callback(TCP_SERV_CONN *ts_conn)
 	        	else ifcmp("twrec") tcp_puts("%u", syscfg.tcp2uart_twrec);
 	        	else ifcmp("twcls") tcp_puts("%u", syscfg.tcp2uart_twcls);
 	        	else ifcmp("url") {
-	        		if(tcp2uart_url == NULL) tcp_puts("none");
-	        		else tcp_puts("%s", tcp2uart_url);
+	        		if(tcp_client_url == NULL) tcp_puts("none");
+	        		else tcp_puts("%s", tcp_client_url);
 	        	}
 	        	else ifcmp("reop") tcp_put((syscfg.cfg.b.tcp2uart_reopen)? '1' : '0');
 #endif
@@ -605,24 +696,15 @@ void ICACHE_FLASH_ATTR web_int_callback(TCP_SERV_CONN *ts_conn)
 #ifdef USE_MODBUS
 		    else ifcmp("mdb_") {
 		    	cstr+=4;
-		    	ifcmp("port") tcp_puts("%u", syscfg.mdb_remote_port);
+		    	ifcmp("port") tcp_puts("%u", syscfg.mdb_port);
 		    	else ifcmp("twrec") tcp_puts("%u", syscfg.mdb_twrec);
 		    	else ifcmp("twcls") tcp_puts("%u", syscfg.mdb_twcls);
+	        	else ifcmp("url") {
+	        		if(tcp_client_url == NULL) tcp_puts("none");
+	        		else tcp_puts("%s", tcp_client_url);
+	        	}
 	        	else ifcmp("reop") tcp_put((syscfg.cfg.b.mdb_reopen)? '1' : '0');
-		    	else tcp_put('?');
-		    }
-#endif
-#ifdef UDP_TEST_PORT
-		    else ifcmp("udp_") {
-		    	cstr+=4;
-		    	ifcmp("port") tcp_puts("%u", syscfg.udp_test_port);
-		    	else tcp_put('?');
-		    }
-#endif		    
-#ifdef USE_WDRV
-		    else ifcmp("wdrv_") {
-		    	cstr+=5;
-		    	ifcmp("port") tcp_puts("%u", syscfg.wdrv_remote_port);
+	        	else ifcmp("id") tcp_puts("%u", syscfg.mdb_id);
 		    	else tcp_put('?');
 		    }
 #endif
@@ -645,8 +727,12 @@ void ICACHE_FLASH_ATTR web_int_callback(TCP_SERV_CONN *ts_conn)
           ifcmp("rdcfg") Read_WiFi_config(&wificonfig, WIFI_MASK_ALL);
           else ifcmp("newcfg") {
 //        	  tcp_puts("%d", New_WiFi_config(WIFI_MASK_ALL));
-        	  web_conn->web_disc_cb = (web_func_disc_cb)New_WiFi_config;
-        	  web_conn->web_disc_par = WIFI_MASK_ALL;
+        		  tcp_puts("%d",New_WiFi_config(WIFI_MASK_ALL));
+        	  }
+        	  else { */
+        		  web_conn->web_disc_cb = (web_func_disc_cb)New_WiFi_config;
+        		  web_conn->web_disc_par = WIFI_MASK_ALL;
+//        	  }
           }
 //          else ifcmp("csta") tcp_puts("%d", wifi_station_get_connect_status());
           else ifcmp("mode") tcp_puts("%d", wifi_get_opmode());
@@ -832,6 +918,14 @@ void ICACHE_FLASH_ATTR web_int_callback(TCP_SERV_CONN *ts_conn)
         		else web_get_flash(ts_conn);
         	}
         	else ifcmp("ram") web_get_ram(ts_conn);
+#ifdef USE_MODBUS
+        	else ifcmp("mdb") {
+    			web_conn->udata_start = (uint32) &mdb_buf;
+    			web_conn->udata_stop = web_conn->udata_start + sizeof(mdb_buf);
+        		web_get_ram(ts_conn);
+        	}
+#endif
+        	else tcp_put('?');
         }
         else ifcmp("hexdmp") {
         	if(cstr[6]=='d') ts_conn->flag.user_option1 = 1;
@@ -849,14 +943,14 @@ void ICACHE_FLASH_ATTR web_int_callback(TCP_SERV_CONN *ts_conn)
         	}
         	else
 #endif
-        		ifcmp("remote") {
-        		if(tcp2uart_conn != NULL) {
-        			tcp_puts(IPSTR ":%d", IP2STR(&(tcp2uart_conn->remote_ip.dw)), tcp2uart_conn->remote_port);
+        	ifcmp("remote") {
+        		if(uart_drv.uart_rx_buf != NULL && tcp2uart_conn != NULL) {
+	        		tcp_puts(IPSTR ":%d", IP2STR(&(tcp2uart_conn->remote_ip.dw)), tcp2uart_conn->remote_port);
         		}
         		else tcp_strcpy_fd("closed");
         	}
         	else ifcmp("host") {
-        		if(tcp2uart_conn != NULL) tcp_puts(IPSTR ":%d", IP2STR(&(tcp2uart_conn->pcb->local_ip.addr)), tcp2uart_conn->pcb->local_port);
+        		if(uart_drv.uart_rx_buf != NULL && tcp2uart_conn != NULL && tcp2uart_conn->pcb != NULL) tcp_puts(IPSTR ":%d", IP2STR(&(tcp2uart_conn->pcb->local_ip.addr)), tcp2uart_conn->pcb->local_port);
         		else tcp_strcpy_fd("none");
         	}
 #if 0
@@ -902,6 +996,22 @@ void ICACHE_FLASH_ATTR web_int_callback(TCP_SERV_CONN *ts_conn)
         	else tcp_put('?');
         }
 #endif
+#ifdef USE_RS485DRV
+        else ifcmp("rs485_") {
+        	cstr+=6;
+        	ifcmp("baud") tcp_puts("%u", rs485cfg.baud);
+        	else ifcmp("timeout") tcp_puts("%u", rs485cfg.timeout);
+           	else ifcmp("pause") tcp_puts("%u", rs485cfg.pause);
+        	else ifcmp("parity") tcp_puts("%u", rs485cfg.flg.b.parity);
+        	else ifcmp("pinre") tcp_puts("%u", rs485cfg.flg.b.pin_ena);
+        	else ifcmp("swap") tcp_put((rs485cfg.flg.b.swap)? '1' : '0');
+        	else ifcmp("spdtw") tcp_put((rs485cfg.flg.b.spdtw)? '1' : '0');
+        	else ifcmp("master") tcp_put((rs485cfg.flg.b.master)? '1' : '0');
+        	else ifcmp("enable") tcp_put((rs485vars.status != RS485_TX_RX_OFF)? '1' : '0');
+        	else tcp_put('?');
+        }
+#endif
+
         else ifcmp("wfs_") {
         	cstr+=4;
         	ifcmp("files") tcp_puts("%u", numFiles);
@@ -948,25 +1058,37 @@ void ICACHE_FLASH_ATTR web_int_callback(TCP_SERV_CONN *ts_conn)
         	}
         	else tcp_put('?');
         }
+#ifdef USE_OVERLAY
+		else ifcmp("ovl") {
+			cstr += 3;
+			if(*cstr == ':') {
+				int i = ovl_loader(cstr + 1);
+				if (i == 0) {
+					if(CheckSCB(SCB_WEBSOC)) {
+						tcp_puts("%d", ovl_call(1));
+					}
+					else {
+						web_conn->web_disc_cb = (web_func_disc_cb)ovl_call; // адрес старта оверлея
+						web_conn->web_disc_par = 1; // параметр функции - инициализация
+					}
+				}
+				tcp_puts("%d", i);
+			}
+			else if(*cstr == '$') {
+    			if(ovl_call != NULL) tcp_puts("%d", ovl_call(ahextoul(cstr + 1)));
+    			else tcp_put('?');
+    		}
+			else if(*cstr == '@') {
+    			if(ovl_call != NULL) tcp_puts("%d", ovl_call((int) cstr + 1));
+    			else tcp_put('?');
+    		}
+			else tcp_put('?');
+		}
+#endif
 #ifdef USE_SNTP
 		else ifcmp("sntp_") {
 			cstr += 5;
 			ifcmp("time") tcp_puts("%u", get_sntp_time());
-			else tcp_put('?');
-		}
-#endif
-#ifdef USE_WDRV
-		else ifcmp("wdrv_") {
-			cstr+=5;
-			ifcmp("freq") {
-				tcp_puts("%u", wdrv_sample_rate);
-			}
-			else ifcmp("port") {
-				tcp_puts("%u", wdrv_host_port);
-			}
-			else ifcmp("ip") {
-				tcp_puts(IPSTR, IP2STR(&wdrv_host_ip));
-			}
 			else tcp_put('?');
 		}
 #endif

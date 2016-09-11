@@ -71,8 +71,8 @@ void ICACHE_FLASH_ATTR WiFi_go_to_sleep(enum sleep_type mode, uint32 time_us)
 	wifi_fpm_open();
 	wifi_fpm_do_sleep(time_us);
 	flg_wifi_sleep_enable = true;
-	Select_CLKx1(); // REG_CLR_BIT(0x3ff00014, BIT(0));
-	ets_update_cpu_frequency(80);
+//	Select_CLKx1(); // REG_CLR_BIT(0x3ff00014, BIT(0));
+//	ets_update_cpu_frequency(80);
 }
 /******************************************************************************
  * FunctionName : WiFi_up_from_sleep
@@ -364,13 +364,27 @@ void ICACHE_FLASH_ATTR Set_default_wificfg(struct wifi_config *wcfg,
 		wcfg->ap.config.beacon_interval = 100;
 	}
 	if (wset.b.ap_ipinfo) {
+/*
 		IP4_ADDR(&wcfg->ap.ipinfo.ip, 192, 168, 4, 1);
 		IP4_ADDR(&wcfg->ap.ipinfo.gw, 192, 168, 4, 1);
 		IP4_ADDR(&wcfg->ap.ipinfo.netmask, 255, 255, 255, 0);
+*/
+		wcfg->ap.ipinfo.ip.addr = WEB_DEFAULT_SOFTAP_IP;
+		wcfg->ap.ipinfo.gw.addr = WEB_DEFAULT_SOFTAP_GW;
+		wcfg->ap.ipinfo.netmask.addr = WEB_DEFAULT_SOFTAP_MASK;
 	}
 	if (wset.b.ap_ipdhcp) {
+/*
 		IP4_ADDR(&wcfg->ap.ipdhcp.start_ip, 192, 168, 4, 2);
 		IP4_ADDR(&wcfg->ap.ipdhcp.end_ip, 192, 168, 4, 10);
+*/
+#if (WEB_DEFAULT_SOFTAP_IP < 0x80000000)
+		wcfg->ap.ipdhcp.start_ip.addr = WEB_DEFAULT_SOFTAP_IP + 0x01000000;
+		wcfg->ap.ipdhcp.end_ip.addr = WEB_DEFAULT_SOFTAP_IP + 0x09000000;
+#else
+		wcfg->ap.ipdhcp.start_ip.addr = (WEB_DEFAULT_SOFTAP_IP & 0x00FFFFFF) + 0x02000000;
+		wcfg->ap.ipdhcp.end_ip.addr = (WEB_DEFAULT_SOFTAP_IP & 0x00FFFFFF) + 0x0A000000;
+#endif
 	}
 	// if(mode & SOFTAP_MODE) {
 	if (wset.b.ap_dhcp)
@@ -394,9 +408,14 @@ void ICACHE_FLASH_ATTR Set_default_wificfg(struct wifi_config *wcfg,
 		read_macaddr_from_otp(wcfg->st.macaddr);
 	}
 	if (wset.b.st_ipinfo) {
-		IP4_ADDR(&wcfg->st.ipinfo.ip, 192, 168, 1, 50);
+/*
+  		IP4_ADDR(&wcfg->st.ipinfo.ip, 192, 168, 1, 50);
 		IP4_ADDR(&wcfg->st.ipinfo.gw, 192, 168, 1, 1);
 		IP4_ADDR(&wcfg->st.ipinfo.netmask, 255, 255, 255, 0);
+ */
+		wcfg->st.ipinfo.ip.addr = WEB_DEFAULT_STATION_IP;
+		wcfg->st.ipinfo.gw.addr = WEB_DEFAULT_STATION_GW;
+		wcfg->st.ipinfo.netmask.addr = WEB_DEFAULT_STATION_MASK;
 	}
 	wcfg->st.reconn_timeout = DEF_ST_RECONNECT_TIME;
 	if (wset.b.maxtpw) wcfg->phy_max_tpw = DEF_MAX_PHY_TPW;
@@ -517,9 +536,7 @@ LOCAL void ICACHE_FLASH_ATTR wifi_scan_cb(void *arg, STATUS status)
 #endif
 	if (status == OK) {
 		struct bss_info * bss_link = (struct bss_info *) arg;
-//		bss_link = bss_link->next.stqe_next;
 		int total_scan = 0;
-//		int max_scan =  eraminfo.size / (sizeof(struct bss_scan_info));
 		uint8 *ptr = (uint8 *)&buf_scan_infos; // ptr_scan_infos;
 		while (bss_link != NULL && total_scan < max_scan_bss) {
 			ets_memcpy(ptr, &bss_link->bssid, sizeof(struct bss_scan_info));

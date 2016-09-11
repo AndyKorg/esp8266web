@@ -21,12 +21,6 @@
 #ifdef USE_CAPTDNS
 #include "captdns.h"
 #endif
-#ifdef USE_WDRV
-#include "driver/wdrv.h"
-#endif
-#ifdef UDP_TEST_PORT
-#include "udp_test_port.h"
-#endif
 #ifdef USE_NETBIOS
 #include "netbios.h"
 #endif
@@ -210,17 +204,11 @@ void ICACHE_FLASH_ATTR close_all_service(void)
 #ifdef USE_TCP2UART
 		tcp2uart_close();
 #endif
+#ifdef USE_MODBUS
+		mdb_tcp_close(); // mdb_tcp_init(0);
+#endif
 #ifdef USE_WEB
 		if(syscfg.web_port) webserver_close(syscfg.web_port); // webserver_init(0);
-#endif
-#ifdef USE_MODBUS
-		mdb_tcp_init(0); // mdb_tcp_close()
-#endif
-#ifdef UDP_TEST_PORT
-		udp_test_port_init(0);
-#endif
-#ifdef USE_WDRV
-		system_os_post(WDRV_TASK_PRIO, WDRV_SIG_INIT, 0);
 #endif
 		tcpsrv_close_all();
 		flg_open_all_service = false;
@@ -237,6 +225,9 @@ void ICACHE_FLASH_ATTR open_all_service(int flg)
 #endif
 #ifdef USE_TCP2UART
 	if(tcp2uart_servcfg == NULL) tcp2uart_start(syscfg.tcp2uart_port);
+#endif
+#ifdef USE_MODBUS
+	if(mdb_tcp_servcfg == NULL) mdb_tcp_start(syscfg.mdb_port);
 #endif
 #ifdef USE_SNTP
 	if(syscfg.cfg.b.sntp_ena && get_sntp_time() == 0) sntp_inits();
@@ -258,15 +249,6 @@ void ICACHE_FLASH_ATTR open_all_service(int flg)
 #endif
 #ifdef USE_NETBIOS
 	    if(syscfg.cfg.b.netbios_ena) netbios_init();
-#endif
-#ifdef USE_MODBUS
-	    if(syscfg.mdb_remote_port) mdb_tcp_init(syscfg.mdb_remote_port);
-#endif
-#ifdef UDP_TEST_PORT
-	    if(syscfg.udp_test_port) udp_test_port_init(syscfg.udp_test_port);
-#endif
-#ifdef USE_WDRV
-	    if(syscfg.wdrv_remote_port) system_os_post(WDRV_TASK_PRIO, WDRV_SIG_INIT, syscfg.wdrv_remote_port);
 #endif
 	}
     flg_open_all_service = true;
@@ -413,11 +395,13 @@ void ICACHE_FLASH_ATTR wifi_handle_event_cb(System_Event_t *evt)
 			}
 			break;
 		}
+#if DEBUGSOO > 1
 		case EVENT_STAMODE_DHCP_TIMEOUT:
 			os_printf("DHCP timeot\n");
 			break;
 		default:
 			os_printf("?\n");
 			break;
+#endif
 		}
 }

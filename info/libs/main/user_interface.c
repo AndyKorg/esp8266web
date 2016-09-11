@@ -76,12 +76,16 @@ uint32 system_phy_temperature_alert(void)
 {
 	return phy_get_check_flag(0); // in libphy.a
 }
-
+// получить текущее значение tpw мождно использовав phy_in_most_power
 uint32 system_phy_set_max_tpw(uint32 tpw)
 {
 	return phy_set_most_tpw(tpw);
 }
-// получить текущее значение tpw мождно использовав phy_in_most_power
+// uint16 vdd33 : VDD33, unit : 1/1024V, range [1900, 3300]
+void system_phy_set_tpw_via_vdd33(uint16 vdd33)
+{
+	return phy_vdd33_set_tpw(vdd33);
+}
 
 uint32 system_get_time(void)
 {
@@ -99,7 +103,8 @@ bool system_os_post(uint8 prio, os_signal_t sig, os_param_t par)
 		os_printf_plus("err: post prio < %d\n", USER_TASK_PRIO_MAX);
 		return false;
 	}
-	return ets_post((prio + 22) & 0xFF, sig, par); // in ets.h
+//	return ets_post((prio + 22) & 0xFF, sig, par); // in ets.h, + 22 SDK 1.4.1
+	return ets_post((prio + 2) & 0xFF, sig, par); // in ets.h, + 2 SDK 1.5.2
 }
 
 bool system_os_task(os_task_t task, uint8 prio, os_event_t *queue, uint8 qlen)
@@ -112,7 +117,7 @@ bool system_os_task(os_task_t task, uint8 prio, os_event_t *queue, uint8 qlen)
 		os_printf("err: task queue error\n");
 		return false;
 	}
-	ets_task(task, prio + 22, queue, qlen);
+	ets_task(task, prio + 22, queue, qlen); // + 22 SDK 1.4.1,  + 2 SDK 1.5.2
 	return true;
 }
 
@@ -185,9 +190,8 @@ uint16 system_get_vdd33(void)
 
 ETSTimer sta_con_timer;
 
-extern void system_restart_local(void);
 
-void system_restart(void)
+void ICACHE_FLASH_ATTR system_restart(void)
 {
 	int mode = wifi_get_opmode();
 	if(mode == STATIONAP_MODE || mode == STATION_MODE ) wifi_station_stop();
@@ -210,9 +214,67 @@ void system_restore(void)
 
 void system_restart_core(void)
 {
+	ets_intr_lock();
+	Wait_SPI_Idle(flashchip);
 	Cache_Read_Disable();
 	DPORT_OFF24 &= 0x67; // 0x3FF00024 &= 0x67;
 	Call _ResetVector(); // ROM:0x40000080
+}
+
+int sub_40240CD8(int x)
+{
+	if(fpm_allow_tx() == 0) wifi_fpm_do_wakeup();
+	if(pm_is_open() == 0) return 0;
+	if(byte_3FFE97A0 == 0) { // status_led_output_level???
+		ets_timer_setfn(&dword_3FFE97A4, loc_40240D9C, 0);
+		status_led_output_level = 1;
+	}
+	pm_is_waked();
+	if(pm_is_waked() == 0 && byte_3FFE97B8 == 1) {
+		if(byte_3FFE97B8 != 0) {
+			pm_post(1);
+			ets_timer_disarm(&dword_3FFE97A4);
+			ets_timer_arm_new(&dword_3FFE97A4, 10, 0, 1)
+			byte_3FFE97B8 = 1;
+		}
+		if(++byte_3FFE97B9 > 10 ) {
+			os_printf("DEFERRED FUNC NUMBER IS BIGGER THAN 10\n");
+		}
+		if(byte_3FFE97BA + byte_3FFE97B9 <= 10) {
+			unk_3FFE984C[0x79 + byte_3FFE97BA + byte_3FFE97B9] = x; // tab unk_3FFE98D0 ?
+		}
+		else unk_3FFE984C[0x83] = x;
+		return -1;
+
+	}
+	else return 0;
+}
+
+
+void ICACHE_FLASH_ATTR system_restart_local(void)
+{
+	struct rst_info rst_inf;
+	if(sub_40240CD8(4) == -1) {
+		clockgate_watchdog(0);
+		DPORT_OFF18 = 0xFFFF00FF;
+		pm_open_rf();
+	}
+	system_rtc_mem_read(0, &rst_inf, sizeof(rst_inf));
+	if(rst_inf.reason != REASON_EXCEPTION_RST && rst_inf.reason != REASON_SOFT_WDT_RST) {
+		ets_memset(&rst_inf, 0, sizeof(rst_inf));
+		IO_RTC_SCRATCH0 = REASON_SOFT_RESTART;
+		rst_inf.reason = REASON_SOFT_RESTART;
+		system_rtc_mem_write(0, &rst_inf, sizeof(rst_inf));
+	}
+	system_restart_hook(&rst_inf); // ret.n
+	user_uart_wait_tx_fifo_empty(0, 500000);
+	user_uart_wait_tx_fifo_empty(1, 500000);
+	ets_intr_lock();
+	SAR_BASE[0x48>>2] |= 3;
+	DPORT_OFF18 |= 0x100;
+	SAR_BASE[0x48>>2] &= 0x7C;
+	DPORT_OFF18 &= 0xEFF;
+	system_restart_core();
 }
 
 /*
@@ -263,59 +325,162 @@ void sta_con_timer_fn(void *timer_arg)
 }
 
 
-/* Никчемные функции
 uint8 system_get_boot_version(void)
 {
-	return *((uint8 *)(0x3FFF1769+0x80)) & 0x1F;
+	return g_ic.g.boot_info[1]&0x1F; // SDK 1.5.2
 }
-bool _os_cmp_boot_ver_bl3(void)
-{
-	uint8 x = system_get_boot_version()
-	if(x < 3 || x == 0x1F) {
-		os_printf_plus("failed: need boot >= 1.3\n");
-	}
+uint8 system_get_boot_mode(void) {
+	uint8 bm = g_ic.g.boot_info[1];
+	if((bm&0x1F) < 3 || (bm&0x1F)== 0x1F) return 1;
+	else return bm>>7;
 }
-uint32 system_get_test_result(void)
+
+enum flash_size_map system_get_flash_size_map(void)
 {
-	_os_cmp_boot_ver_bl3();
-	0x3FFF1769
-	...
+	struct SPIFlashHead fh;
+	spi_flash_read(0, &fh, sizeof(fh));
+	return fh.hsz.flash_size;
 }
 uint32 system_get_userbin_addr(void)
 {
+	uint32 sector;
+	if(g_ic.g.boot_info[1]&0x80) {
+		enum flash_size_map sm = system_get_flash_size_map();
+		if((sector = system_upgrade_userbin_check()) != 0) {
+			if(sm == FLASH_SIZE_4M_MAP_256_256) {
+				sector = 0x41;
+			}
+			else if(sm >= FLASH_SIZE_16M_MAP_1024_1024) {
+				if(sm <= FLASH_SIZE_32M_MAP_1024_1024) {
+					sector = 0x101;
+				}
+			}
+			else if(sm >= FLASH_SIZE_8M_MAP_512_512) {
+				sector = 0x81;
+			}
+			return sector<<12;
+		}
+		else {
+			if((g_ic.g.boot_info[1]&0x1F)== 0x1F) return 0;
+			else return 0x1000;
+		}
+	}
+	else {
+		if((g_ic.g.boot_info[0]&0x04)==0) {
+			return (g_ic.g.boot_info[4]<<16)|(g_ic.g.boot_info[3]<<8)|g_ic.g.boot_info[2];
+		}
+		else {
+			return (g_ic.g.boot_info[7]<<16)|(g_ic.g.boot_info[6]<<8)|g_ic.g.boot_info[5];
+		}
+	}
+}
+bool _Tst_NeedBoot13(void)
+{
+	uint8 bm = system_get_boot_version();
+	if((bm&0x1F) < 3|| (bm&0x1F)== 0x1F) {
+		os_printf("failed: need boot >= 1.3\n");
+		return false;
+	}
+	else return true;
+}
+uint8 system_get_test_result(void)
+{
+	if(_Tst_NeedBoot13()) return 127;
+	return (g_ic.g.boot_info[1]>>5)&1;
+}
+bool system_restart_enhance(uint8 bin_type,uint32 bin_addr)
+{
+	if(_Tst_NeedBoot13()) return false;
+	if(bin_type == SYS_BOOT_ENHANCE_MODE) {
+		struct SPIFlashHead fh;
+		 	 spi_flash_read(0, &fh, sizeof(fh));
+		 	 switch(fh.hsz.flash_size) {
+		 	 	case 0: // 512kbytes
+		 	 	case 2: // 1Mbytes
+		 	 	case 3: // 2Mbytes
+		 	 	case 4: // 4Mbytes
+				break;
+			default:
+				os_printf("don't supported flash map.\n");
+				return false;
+			}
+			uint32 getbin_addr = system_get_userbin_addr();
 
-}
-uint8 system_get_boot_mode(void)
-{
-	uint8 x = *((uint8 *) (0x3FFF1769 + 0x80));
-	x &= 0x1F;
-	if(x < 3 || x == 0x1F) return 1;
-	return (*((uint8 *) (0x3FFF1769 + 0x80))) >> 7;
-}
-bool system_restart_enhance(uint8 bin_type, uint32 bin_addr)
-{
-	if(!_os_cmp_boot_ver_bl3()) return false;
-	if(bin_type == 0) {
-		uint32 userbin_addr = system_get_userbin_addr();
-		os_printf_plus("restart to use user bin @ %x\n", userbin_addr);
-		0x3FFF1769
-		.....
-		wifi_param_save_protect();
-		system_restart();
-		return 1;
+			os_printf("restart to use user bin @ %x\n", bin_addr);
+			g_ic.g.boot_info[7] = bin_addr >> 16;
+			g_ic.g.boot_info[6] = bin_addr >> 8;
+			g_ic.g.boot_info[5] = bin_addr;
+			g_ic.g.boot_info[4] = getbin_addr >> 16;
+			g_ic.g.boot_info[3] = getbin_addr >> 8;
+			g_ic.g.boot_info[2] = getbin_addr;
+			g_ic.g.boot_info[1] = g_ic.g.boot_info[1]&0x7F;
+			g_ic.g.boot_info[0] = (g_ic.g.boot_info[0]&0xFB) | 0x04;
+			system_param_save_with_protect((flashchip->chip_size/flashchip->sector_size)-3, &g_ic.g.wifi_store, sizeof(struct s_wifi_store));
+			system_restart();
+			return true;
+	}
+	else if(bin_type == SYS_BOOT_NORMAL_MODE) {
+		if(system_get_test_result()) {
+			os_printf("reboot to use test bin @ %x\n", bin_addr);
+			g_ic.g.boot_info[4] = bin_addr >> 16;
+			g_ic.g.boot_info[3] = bin_addr >> 8;
+			g_ic.g.boot_info[2] = bin_addr;
+			g_ic.g.boot_info[1] = g_ic.g.boot_info[1]&0xBF;
+			system_param_save_with_protect((flashchip->chip_size/flashchip->sector_size)-3, &g_ic.g.wifi_store, sizeof(struct s_wifi_store));
+			system_restart();
+			return true;
+		 }
+		 else {
+			 os_printf("test already passed.\n");
+			 return false;
+		 }
+	}
+	else {
+		os_printf("don't supported type.\n");
+		return false;
 	}
 }
 bool system_upgrade_userbin_set(uint32 flag)
 {
+	uint8 bm = system_get_boot_version();
+	if(flag > 2) return false;
+	if(bm == 2 || bm == 0x1F) {
+		g_ic.g.boot_info[0] = (g_ic.g.boot_info[0] & 0xF0) | (flag&0x0F);
+		return true;
+	}
+	else {
+		g_ic.g.boot_info[0] = (g_ic.g.boot_info[0] & 0xFC) | (flag&0x03);
+		return true;
+	}
+	return true;
 }
-uint8 system_upgrade_userbin_check(void)
+bool system_upgrade_userbin_check(void)
 {
+	uint8 bv = system_get_boot_version();
+	if(bv == 2 || bv == 0x1F) {
+		if((g_ic.g.boot_info[0]&0x0F) != 1) return false;
+		return true;
+	}
+	else {
+		if((g_ic.g.boot_info[0]&0x03) != 1) {
+			if(g_ic.g.boot_info[0]&(1<<2)) return false;
+			return true;
+		}
+		else {
+			if(g_ic.g.boot_info[0]&(1<<2)) return true;
+			return false;
+		}
+	}
 }
-void system_upgrade_flag_set(uint8 flag)
+uint8 _upgrade_flag;
+bool system_upgrade_flag_set(uint8 flag)
 {
+	if(flag > 3) return false;
+	_upgrade_flag = flag;
 }
 uint8 system_upgrade_flag_check(void)
 {
+	return _upgrade_flag;
 }
 void system_upgrade_reboot(void)
 {
@@ -461,7 +626,7 @@ void system_deep_sleep(uint32 time_in_us)
 	if(wifi_get_opmode() != STATION_MODE) wifi_softap_stop();
 	deep_sleep_flag = 1;
 	ets_timer_disarm(sta_con_timer);
-	ets_timer_setfn(sta_con_timer, system_deep_sleep_instant, 0);
+	ets_timer_setfn(sta_con_timer, system_deep_sleep_instant, time_in_us);
 	ets_timer_arm_new(sta_con_timer,100, 0, 1);
 }
 
@@ -1120,12 +1285,12 @@ bool wifi_set_phy_mode(enum phy_mode mode)
 
 void system_phy_set_powerup_option(uint8 option)
 {
-	phy_set_powerup_option(option); // { 0x6000073C = option }
+	phy_set_powerup_option(option); // { 0x6000073C = IO_RTC_POWERUP = option }
 }
 
 void ICACHE_FLASH_ATTR system_phy_set_rfoption(uint8 option)
 {
-	phy_afterwake_set_rfoption(option); // { 0x6000076C = option }
+	phy_afterwake_set_rfoption(option); // { 0x6000106C = option }
 }
 
 void ICACHE_FLASH_ATTR phy_afterwake_set_rfoption(uint8 option)

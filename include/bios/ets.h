@@ -109,9 +109,9 @@ typedef struct _sargc_tsk {
 typedef void (tfunc_tsk)(void *);
 
 typedef struct _ss_task {
-	tfunc_tsk * func;		//+0
-	sargc_tsk * argc;	//+4
-	uint8 size;			//+8
+	ETSTask *task;		//+0
+	ETSEvent * queue;	//+4
+	uint8 qlen;			//+8
 	uint8 ch_09;		//+9
 	uint8 cnts;			//+10
 	uint8 cnte;			//+11
@@ -193,8 +193,8 @@ void ets_isr_attach(uint32_t, void*, void*);
 void ets_isr_mask(uint32_t);
 void ets_isr_unmask(uint32_t);
 
-void ets_intr_lock();
-void ets_intr_unlock();
+void ets_intr_lock(void);
+void ets_intr_unlock(void);
 
 #ifndef _ETS_SYS_H
 /* timer related */
