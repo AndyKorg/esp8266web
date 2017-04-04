@@ -689,7 +689,7 @@ bool ICACHE_FLASH_ATTR web_inc_fopen(TCP_SERV_CONN *ts_conn, uint8 *cFile)
 	};
 	WEBFS_HANDLE fp = WEBFSOpen(cFile);
 #if DEBUGSOO > 1
-	os_printf("of%d[%s] ", fp, cFile);
+	os_printf("\n inc open of%d[%s] ", fp, cFile);
 #endif
 	if(fp != WEBFS_INVALID_HANDLE) {
 		if(fatCache.flags & WEBFS_FLAG_HASINDEX) SetSCB(SCB_FCALBACK); // файл надо парсить
@@ -706,6 +706,9 @@ bool ICACHE_FLASH_ATTR web_inc_fopen(TCP_SERV_CONN *ts_conn, uint8 *cFile)
 		}
 	}
 	else { // File not found
+#if DEBUGSOO > 1
+		os_printf("\n file not found %s", cFile);
+#endif
 	    return false;
 	};
 	web_inc_fp(web_conn, fp);
@@ -798,7 +801,7 @@ LOCAL bool ICACHE_FLASH_ATTR webserver_open_file(HTTP_CONN *CurHTTP, TCP_SERV_CO
 				web_conn->content_len = sizeHTTPfserror;
 				CurHTTP->fileType = HTTP_HTML;
 #if DEBUGSOO > 1
-				os_printf("of%d[%s] ", web_conn->webfile, CurHTTP->pFilename);
+				os_printf("/nthis of%d[%s] ", web_conn->webfile, CurHTTP->pFilename);
 #endif
 				return true;
 			}
@@ -828,7 +831,7 @@ LOCAL bool ICACHE_FLASH_ATTR webserver_open_file(HTTP_CONN *CurHTTP, TCP_SERV_CO
 				web_conn->content_len = sizeHTTPfsupload;
 				CurHTTP->fileType = HTTP_HTML;
 #if DEBUGSOO > 1
-				os_printf("of%d[%s] ", web_conn->webfile, CurHTTP->pFilename);
+				os_printf("/nis of%d[%s] ", web_conn->webfile, CurHTTP->pFilename);
 #endif
 				return true;
 			}
@@ -1726,7 +1729,7 @@ LOCAL err_t ICACHE_FLASH_ATTR webserver_received_data(TCP_SERV_CONN *ts_conn)
 {
 #if DEBUGSOO > 1
     tcpsrv_print_remote_info(ts_conn);
-    os_printf("read: %d ", ts_conn->sizei);
+    os_printf("read pc: %d ", ts_conn->sizei);
 #endif
     HTTP_CONN CurHTTP;     // Current HTTP connection state
     WEB_SRV_CONN *web_conn = ReNew_web_conn(ts_conn);
@@ -1738,6 +1741,9 @@ LOCAL err_t ICACHE_FLASH_ATTR webserver_received_data(TCP_SERV_CONN *ts_conn)
     }
     if(CheckSCB(SCB_CLOSED | SCB_DISCONNECT | SCB_FCLOSE )) // обрабатывать нечего
     	return ERR_OK;
+#if DEBUGSOO > 1
+	os_printf("continue\n");
+#endif
     if(!CheckSCB(SCB_WEBSOC)) {
     	web_conn->udata_start = 0;
     	web_conn->udata_stop = 0;
@@ -1767,7 +1773,7 @@ LOCAL err_t ICACHE_FLASH_ATTR webserver_received_data(TCP_SERV_CONN *ts_conn)
 #ifdef WEBSOCKET_ENA
 		os_printf("%s f[%s] ", (CheckSCB(SCB_POST))? "POST" : (CheckSCB(SCB_WEBSOC))? "WEBSOC" : "GET", CurHTTP.pFilename);
 #else
-		os_printf("%s f[%s] ", (CheckSCB(SCB_POST))? "POST" : "GET", CurHTTP.pFilename);
+		os_printf("%s f[%s] ", (CheckSCB(SCB_POST))? "POST PC" : "G	ET PC", CurHTTP.pFilename);
 #endif
 #endif
 #if DEBUGSOO > 3

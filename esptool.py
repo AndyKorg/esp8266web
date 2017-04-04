@@ -66,7 +66,9 @@ class ESPROM:
             "\x04\x00\x0b\xcc\x56\xec\xfd\x06\xff\xff\x00\x00"
 
     def __init__(self, port=0, baud=ESP_ROM_BAUD):
+        print 'serial openinig...'
         self._port = serial.Serial(port, baud)
+        print 'serial opened...'
 
     """ Read bytes from the serial port while performing SLIP unescaping """
     def read(self, length=1):

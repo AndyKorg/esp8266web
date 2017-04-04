@@ -254,18 +254,12 @@ sint16 ICACHE_FLASH_ATTR flash_read_cfg(void *ptr, uint16 id, uint16 maxsize)
 	fobj_head fobj;
 	fobj.n.id = id;
 	fobj.n.size = 0;
-#if DEBUGSOO > 2
-	os_printf("read-id:%02x[%u] ", id, maxsize);
-#endif
 	uint32 faddr = get_addr_bscfg(false);
 	if(faddr < 4) return -faddr-1;
 	faddr = get_addr_fobj(faddr, &fobj, false);
 	if(faddr < 4) return -faddr-1;
 	maxsize = mMIN(fobj.n.size, maxsize);
 	if((maxsize)&&(flash_read(faddr + fobj_head_size, ptr, maxsize))) return -2; // error
-#if DEBUGSOO > 2
-		os_printf("ok,size:%u ", fobj.n.size);
-#endif
 	return fobj.n.size;
 }
 //=============================================================================

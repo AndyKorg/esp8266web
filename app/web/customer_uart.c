@@ -186,6 +186,10 @@ void ICACHE_FLASH_ATTR ClockUartInit(void){
 	os_timer_disarm(&UartRxParceTimer);										//Таймер разбора команды
 	os_timer_setfn(&UartRxParceTimer, (os_timer_func_t *) ParceClockCmdOut, NULL);
 	ets_timer_arm_new(&UartRxParceTimer, CLK_UART0_PARSE, OS_TIMER_REPEAT, OS_TIMER_MS);
+#if DEBUGSOO > 0
+	os_printf("My UART init OK\n");
+#endif
+
 }
 
 /*

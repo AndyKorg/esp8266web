@@ -24,11 +24,30 @@ VOID_PTR_WEATHER_END weatherResFunc = NULL;		//Callback по окончании 
 
 #define isdigit(val) ((val>='0')&&(val<='9'))
 
-double ICACHE_FLASH_ATTR strtofloat(char *s)
+struct ip_addr ipaddr;				//IP сервера - resolve from DNS
+struct tcp_pcb *TCPSockJSON = NULL;
+char *query_template = NULL;
+
+/*
+ * Конвертирование строки плавающего в целое через плавающее.
+ * Округляет по математически
+ */
+signed int ICACHE_FLASH_ATTR strtoIntfromFloat(char *s)
 {
         double a = 0.0;
         int e = 0;
         int c;
+        int negative = 0;
+
+        c = *s;
+        if (c == '-'){
+        	negative++;
+        	s++;
+        }
+        else if (c == '+'){
+        	s++;
+        }
+
         while ((c = *s++) != '\0' && isdigit(c)) {
                 a = a*10.0 + (c - '0');
         }
@@ -62,21 +81,31 @@ double ICACHE_FLASH_ATTR strtofloat(char *s)
                 a *= 0.1;
                 e++;
         }
-        return a;
+        if ((a-((int)a)) >0.5){
+        	a++;
+        }
+
+        return negative? (0-((int)a)) : (int)a; //Приводится к целому именно положительное плавающее, т.к. компилятор отрицательное плавающее преобразует в 0
 }
 
 /*
  * Обработка принятого пакета
  */
-err_t ICACHE_FLASH_ATTR weatherProcess(struct pbuf *p)
+#define STATE_RESET 	1
+#define STATE_NOP 		0
+
+err_t ICACHE_FLASH_ATTR weatherProcess(struct pbuf *p, uint8 Reset)
 {
 
-	#define STATE_START		0					//Ожидается начальный апостроф
-	#define STATE_SIMBOL	1					//Ожидается символ из строки params с индексом currParam
-	#define STATE_STOP		2					//Ожидается конечный апостроф
-	#define STATE_END_PARAM	3					//двоеточие
-	#define STATE_END_VALUE	4					//Пока не встретится запятая все записывать в буфер значения
-	#define STATE_STRING	5					//Идет прием строки
+	#define STATE_HTTP_WAITE	0				//Ожидается ответ свервера HTTP/1.1 200 OK
+	#define STATE_START		1					//Ожидается начальный апостроф
+	#define STATE_SIMBOL	2					//Ожидается символ из строки params с индексом currParam
+	#define STATE_STOP		3					//Ожидается конечный апостроф
+	#define STATE_END_PARAM	4					//двоеточие
+	#define STATE_END_VALUE	5					//Пока не встретится запятая все записывать в буфер значения
+	#define STATE_STRING	6					//Идет прием строки
+
+	const char *httpOk =	"HTTP/1.1 200 OK\n";
 
 	//Переменные прогноза
 	sWeatherParam ForecastParams[WE_PARAM_MAX] = {
@@ -93,9 +122,16 @@ err_t ICACHE_FLASH_ATTR weatherProcess(struct pbuf *p)
 
 	sWeatherParam *paramsProcess = (weatherSet.cnt==WE_TYPE_CURRENT)?WeatherParams:ForecastParams; //Параметры с которыми идет текущая работа
 
-	static uint8 currParam = 0,					//Текущий обрабатываемый параметр
+
+	static uint8
+				 currParam = 0,					//Текущий обрабатываемый параметр
 				 posParam = 0, 					//Позиция в параметре
-				 state = STATE_START;			//Стостояние кончного автомата
+				 state = STATE_HTTP_WAITE;		//Стостояние кончного автомата
+
+	if (Reset == STATE_RESET){
+		state = STATE_HTTP_WAITE;
+		return ERR_OK;
+	}
 
 	char simbol, *data = (char*)(p->payload);
 	static char *buf, *startBuf;				//Буфер значения переменной
@@ -124,6 +160,19 @@ err_t ICACHE_FLASH_ATTR weatherProcess(struct pbuf *p)
 	for(i = 0; i<p->len;i++){
 		simbol = data[i];
 		switch(state){
+			case STATE_HTTP_WAITE: 			//Ожидается ответ сервера HTTP/1.1 200 OK
+				if (simbol == httpOk[posParam]){
+					posParam++;
+					if (posParam == os_strlen(httpOk)){
+						state++;
+						posParam = 0;
+					}
+				}
+				else if(i == (p->len-2)){ 	//Уже конец первой порции данных, а HTTP 200 так и не было, ошибка
+					posParam = 0;
+					return ERR_CLSD;
+				}
+				break;
 			case STATE_START:				//Ожидаем начало имени параметра
 				if (simbol == '"'){
 					state++;
@@ -165,9 +214,10 @@ err_t ICACHE_FLASH_ATTR weatherProcess(struct pbuf *p)
 						case WE_ORDER_TIME:
 							weatherResult.weathers[weatherResult.currWrite].Time = atoi(startBuf);
 							break;
-						case WE_ORDER_TEMPR:
-							weatherResult.weathers[weatherResult.currWrite].Temperature = strtofloat(startBuf);
+						case WE_ORDER_TEMPR:{
+							weatherResult.weathers[weatherResult.currWrite].Temperature = strtoIntfromFloat(startBuf);
 							break;
+						}
 						case WE_ORDER_DESCR:
 							os_memcpy(weatherResult.weathers[weatherResult.currWrite].DescriptUTF8, startBuf, WE_DISCRIPT_LEN);
 							break;
@@ -218,16 +268,26 @@ err_t ICACHE_FLASH_ATTR weatherProcess(struct pbuf *p)
 static void ICACHE_FLASH_ATTR  json_client_close(struct tcp_pcb *pcb)
 {
 	os_timer_disarm(&weatherResult.timeout_timet);	//Отключить таймер таймаута ответа сервера
+
+#if DEBUGSOO > 0
+	os_printf("Json close\n");
+#endif
 	tcp_arg(pcb, NULL);
 	tcp_sent(pcb, NULL);
+	tcp_recv(pcb, NULL);
+
 	tcp_close(pcb);
+
+	if (TCPSockJSON != NULL){
+		os_free(TCPSockJSON);
+		TCPSockJSON = NULL;
+	}
+
+	weatherProcess(NULL, STATE_RESET);
 	weatherResult.state = WEATHER_STOP;
 	if (weatherResFunc != NULL){
 		weatherResFunc(ERR_OK);
 	}
-#if DEBUGSOO > 0
-	os_printf("Json close\n");
-#endif
 }
 
 /*
@@ -235,24 +295,31 @@ static void ICACHE_FLASH_ATTR  json_client_close(struct tcp_pcb *pcb)
  */
 static err_t ICACHE_FLASH_ATTR json_receive(void *arg, struct tcp_pcb *pcb, struct pbuf *p, err_t err)
 {
-
 	LWIP_UNUSED_ARG(arg);
+	err_t res = ERR_OK;
+#if DEBUGSOO > 0
+		os_printf("Json recive err = %d\n", err);
+#endif
 
 	os_timer_disarm(&weatherResult.timeout_timet);	//Отключить таймер таймаута ответа сервера
-	if(err == ERR_OK && p != NULL)
+	if((err == ERR_OK) && (p != NULL))
 	{
-		if (weatherProcess(p) == ERR_CLSD){		//Обрабатываем принятые данные
-			json_client_close(pcb);				//Все принято, можно закрывать соединение
-			return ERR_OK;
-		}
-		tcp_recved(pcb, p->tot_len);			//Прием порции данных закончен
+		res = weatherProcess(p, STATE_NOP);			//Обрабатываем принятые данные
+	}
+	if(p != NULL){
+		tcp_recved(pcb, p->tot_len);				//Прием порции данных закончен
 		pbuf_free(p);
 	}
-	else{
-		json_client_close(pcb);
+	if ((res == ERR_CLSD) || (err != ERR_OK)){
+		json_client_close(pcb);						//Все принято, можно закрывать соединение
 	}
+	else{											//Продолжаем прием, таймаут взводим
+		os_timer_setfn(&weatherResult.timeout_timet, (os_timer_func_t *) json_client_close, TCPSockJSON);
+		ets_timer_arm_new(&weatherResult.timeout_timet, WEATHER_TIMEOUT, OS_TIMER_SIMPLE, OS_TIMER_MS);
+	}
+
 #if DEBUGSOO > 0
-		os_printf("Json recive end\n");
+	os_printf("Json recive end\n");
 #endif
 	return ERR_OK;
 }
@@ -262,12 +329,8 @@ static err_t ICACHE_FLASH_ATTR json_receive(void *arg, struct tcp_pcb *pcb, stru
  */
 static err_t ICACHE_FLASH_ATTR json_connected(void *arg, struct tcp_pcb *pcb, err_t err)
 {
-#if DEBUGSOO > 0
-		os_printf("Json connect ");
-#endif
-	uint8 i;
-	char *query_template;
-	query_template = os_zalloc(QUERY_LEN);
+	if (query_template == NULL)
+		query_template = os_zalloc(QUERY_LEN);
 	if (query_template == NULL){
 		return ERR_MEM;
 	}
@@ -292,31 +355,23 @@ static err_t ICACHE_FLASH_ATTR json_connected(void *arg, struct tcp_pcb *pcb, er
 	query_template += os_strlen(query_template);
 	if (weatherSet.cnt){
 		os_sprintf_fd(query_template, WEATHER_QUERY_CNT, weatherSet.cnt);
+		query_template += os_strlen(query_template);
 	}
-	query_template += os_strlen(query_template);
 	os_sprintf_fd(query_template, WEATHER_QUERY_PARAM, weatherSet.APIkey);
-
-#if DEBUGSOO > 0
-		os_printf("q= %s\n", queryOut);
-#endif
 
 	LWIP_UNUSED_ARG(arg);
 	if(err == ERR_OK)
 	{
+		uint8 i;
 		tcp_write(pcb, queryOut, os_strlen(queryOut), 0);	//Подготовить запрос
-		if (tcp_output(pcb) == ERR_OK){				//Отправить запрос
-			weatherResult.currWrite = weatherSet.cnt?1:0;
+		if (tcp_output(pcb) == ERR_OK){						//Отправить запрос
+			weatherResult.currWrite = weatherSet.cnt?1:0; 	//Начать с текущей погоды или с прогноза
 			for(i = weatherResult.currWrite; i<(weatherSet.cnt?WEATHER_MAX:1); i++){
 				weatherResult.weathers[i].Time = WEATHER_UNDEFINE;
 			}
-#if DEBUGSOO > 0
-			os_printf("output ok\n");
-#endif
 		}
 	}
-#if DEBUGSOO > 0
-		os_printf(" result = %d\n", err);
-#endif
+//	os_free(query_template);
 	return err;
 }
 
@@ -337,9 +392,6 @@ static err_t ICACHE_FLASH_ATTR json_client_sent(void *arg, struct tcp_pcb *pcb, 
  */
 static void ICACHE_FLASH_ATTR weatherGet(struct ip_addr ip_addr)
 {
-	struct tcp_pcb *TCPSockJSON;
-
-	TCPSockJSON = tcp_new();
 	if (TCPSockJSON == NULL)
 	{
 #if DEBUGSOO > 0
@@ -347,9 +399,10 @@ static void ICACHE_FLASH_ATTR weatherGet(struct ip_addr ip_addr)
 #endif
 		return;
 	}
+
 	tcp_recv(TCPSockJSON, json_receive);
 	tcp_sent(TCPSockJSON, json_client_sent);
-	tcp_connect(TCPSockJSON, &ip_addr, WEATHER_SERVER_PORT, json_connected);
+	tcp_connect(TCPSockJSON, &ip_addr, WEATHER_SERVER_PORT, json_connected);//Начать соединение
 
 	os_timer_disarm(&weatherResult.timeout_timet);			//Запуск тамера таймаута
 	os_timer_setfn(&weatherResult.timeout_timet, (os_timer_func_t *) json_client_close, TCPSockJSON);
@@ -360,13 +413,16 @@ static void ICACHE_FLASH_ATTR weatherGet(struct ip_addr ip_addr)
  * Адрес получен от DNS или таймаут
  */
 static void ICACHE_FLASH_ATTR resolve(const char *name, struct ip_addr *ipaddr, void *arg){
-	if ((ipaddr) && (ipaddr->addr)){	//Адрес получен
+	if ((ipaddr) && (ipaddr->addr)){	//Адрес полученв
 		weatherGet(*ipaddr);
 		return;
 	}
 	weatherResult.state = WEATHER_STOP;	//Не удалось получить адрес
 	if (weatherResFunc != NULL){
 		weatherResFunc(ERR_RTE);
+#if DEBUGSOO > 0
+		os_printf("DNS wheather error!\n");
+#endif
 	}
 }
 
@@ -376,27 +432,46 @@ static void ICACHE_FLASH_ATTR resolve(const char *name, struct ip_addr *ipaddr, 
 void ICACHE_FLASH_ATTR weatherStart(void)
 {
 
+	if (TCPSockJSON == NULL)
+		TCPSockJSON = tcp_new();
+#if DEBUGSOO > 0
+	if (TCPSockJSON == NULL)
+		os_printf("\nTCPSockJSON IS NULL!\n");
+#endif
+
 	uint8 noErr = weatherSet.city;
 	if (!noErr){
 		noErr = (os_strlen(weatherSet.lat)==0)?0:os_strlen(weatherSet.lon);
 	}
 	noErr += os_strlen(weatherSet.APIkey);
 	if (!noErr){						//Нет корректных данных для запроса
+#if DEBUGSOO > 0
+		os_printf("\nno param weather\n");
+#endif
 		return;
 	}
 
-	char *serverName = WEATHER_SERVER_NAME;
-	struct ip_addr ipaddr;				//IP сервера - resolve from DNS
-
 	weatherResult.state = WEATHER_IN_PROGRESS;
+
+	char *serverName = WEATHER_SERVER_NAME;
+
 	//Сначала получаем IP сервера по имени
-	switch (dns_gethostbyname(serverName, &ipaddr, resolve, NULL)) {
+	switch (dns_gethostbyname(serverName, &ipaddr, (dns_found_callback) resolve, NULL)) {
 		case ERR_OK:					//Адрес разрешен из кэша или локальной таблицы
+#if DEBUGSOO > 0
+		os_printf("\nadres resolved\n");
+#endif
 			weatherGet(ipaddr);
 			break;
 		case ERR_INPROGRESS: 			//Запущен процесс разрешения имени с внешнего DNS
+#if DEBUGSOO > 0
+		os_printf("\nadres resolv start\n");
+#endif
 			break;
 		default:
+#if DEBUGSOO > 0
+		os_printf("\nadres error\n");
+#endif
 			weatherResult.state = WEATHER_STOP;
 			if (weatherResFunc != NULL){
 				weatherResFunc(ERR_ABRT);

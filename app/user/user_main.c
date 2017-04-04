@@ -33,6 +33,9 @@
 #ifdef USE_RS485DRV
 #include "driver/rs485drv.h"
 #include "mdbtab.h"
+#else
+#include "mdbtab.h"
+smdb_ubuf mdb_buf; // TODO: выкинуть т.к. оверлеи не нужны
 #endif
 
 
@@ -59,12 +62,14 @@ void ICACHE_FLASH_ATTR init_done_cb(void)
 		New_WiFi_config(WIFI_MASK_ALL);
 		break;
 	}
-	ClockUartInit();
-	ClockWebInit();
 #ifdef USE_RS485DRV
 	rs485_drv_start();
 	init_mdbtab();
 #endif
+
+	ClockUartInit();
+	ClockWebInit();
+
 }
 
 extern uint32 _lit4_start[]; // addr start BSS in IRAM
@@ -97,6 +102,12 @@ void ICACHE_FLASH_ATTR user_init(void) {
 extern void gdbstub_init(void);
 	gdbstub_init();
 #endif
+	Setup_WiFi();
+	WEBFSInit(); // файловая система
+
+	system_deep_sleep_set_option(0);
+	system_init_done_cb(init_done_cb);
+
 #if DEBUGSOO > 0
 	if(eraminfo.size > 0) os_printf("Found free IRAM: base: %p, size: %d bytes\n", eraminfo.base,  eraminfo.size);
 	os_printf("System memory:\n");
@@ -109,9 +120,5 @@ extern void gdbstub_init(void);
 #if DEBUGSOO > 0
 	os_printf("Set CPU CLK: %u MHz\n", ets_get_cpu_frequency());
 #endif
-	Setup_WiFi();
-	WEBFSInit(); // файловая система
 
-	system_deep_sleep_set_option(0);
-	system_init_done_cb(init_done_cb);
 }

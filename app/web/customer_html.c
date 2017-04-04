@@ -24,7 +24,7 @@ uint8 ICACHE_FLASH_ATTR ParceNumObject(uint8* pcmd, uint8 maxNum, uint8 *Ident[]
 				*lenCmd = NUM_LEN_CMD;
 			}
 		}
-#if (DEBUGSOO==1)
+#if DEBUGSOO>1
 		else{
 			os_printf_plus("bad max index cmd maxNum = %d\n", maxNum);
 		}
@@ -147,8 +147,8 @@ uint8 ICACHE_FLASH_ATTR parseHttpSetVar(pHttpVar *ParentVar, uint8 ParentLen, WE
 							*((uint8*)VarList[i].Value) = (uint8)rom_atoi(pvar);
 						break;
 					case vtString:
-#if DEBUGSOO==1
-		os_printf("param = %s val = %s\n", pcmd, pvar);
+#if DEBUGSOO>1
+		os_printf("custom https param = %s val = %s\n", pcmd, pvar);
 #endif
 
 						if (os_strlen(pvar) == 0){	//Пустая строка не хораняется, поэтому исопьзуется пробел
@@ -157,7 +157,7 @@ uint8 ICACHE_FLASH_ATTR parseHttpSetVar(pHttpVar *ParentVar, uint8 ParentLen, WE
 						else{
 							os_sprintf_fd((uint8*)VarList[i].Value, "%s",pvar);
 						}
-#if DEBUGSOO==1
+#if DEBUGSOO>1
 		os_printf("after save = %s\n", ((uint8*)VarList[i].Value));
 #endif
 						break;

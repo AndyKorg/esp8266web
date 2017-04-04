@@ -17,6 +17,7 @@
 	#define WIFI_ST_NAME	"default"
 #endif
 #ifndef WIFI_ST_PASSWORD
+
 	#define WIFI_ST_PASSWORD	"0123456789"
 #endif
 #ifndef WIFI_MODE

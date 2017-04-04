@@ -91,24 +91,23 @@
 }
 </style>
 <script>
-	var weatherTimer;
+	var weatherTimer = 0;
 	
 	function weatherCheck()
 	{
 		if (weatherTimer === 0){
-			return;
+			var xhr = new XMLHttpRequest();
+			var params = 'weather_city='+document.getElementById("weather_city").value;
+			params += '&weather_lon='+document.getElementById("weather_lon").value;
+			params += '&weather_lat='+document.getElementById("weather_lat").value;
+			params += '&weather_api='+document.getElementById("weather_api").value;
+			params += '&weather_test=1';
+			xhr.open("POST", '', true)
+			xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded')
+			xhr.send(params);
+			weatherTimer = 8;
+			childCheck();
 		}
-		var xhr = new XMLHttpRequest();
-		var params = 'weather_city='+document.getElementById("weather_city").value;
-		params += '&weather_lon='+document.getElementById("weather_lon").value;
-		params += '&weather_lat='+document.getElementById("weather_lat").value;
-		params += '&weather_api='+document.getElementById("weather_api").value;
-		params += '&weather_test=1';
-		xhr.open("POST", '', true)
-		xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded')
-		xhr.send(params);
-		weatherTimer = 8;
-		childCheck();
 	}
 
 

@@ -1,10 +1,10 @@
 #############################################################
 #
 # Root Level Makefile
-#460800
+#460800 74880 230400 57600
 #############################################################
 
-ESPOPTION ?= -p COM1 -b 230400
+ESPOPTION ?= -p COM4 -b 460800
 
 UPLOADADDR = http://sesp8266/fsupload
 
@@ -52,8 +52,9 @@ OBJDUMP := $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-objdump
 
 SDK_TOOLS	?= c:/Espressif/utils
 #ESPTOOL		?= $(SDK_TOOLS)/esptool
+#ESPTOOL		?= C:\Espressif\utils\ESP8266\esptool.py
 ESPTOOL	?= C:/Python27/python.exe $(WEB_BASE)esptool.py
-OVLTOOL ?= C:/Python27/python.exe $(WEB_BASE)ovls.py
+#OVLTOOL ?= C:/Python27/python.exe $(WEB_BASE)ovls.py
 UPLOADTOOL ?= C:/Python27/python.exe $(WEB_BASE)uploader.py
 
 CSRCS ?= $(wildcard *.c)
@@ -206,9 +207,9 @@ ifeq ($(freqdiv), 15)
 else
 	@dd if=../bin/rapid_loader_40m.bin >../bin/$(ADDR_FW1).bin
 endif	
-	@dd if=../bin/0.bin >>../bin/$(ADDR_FW1).bin
-	$(OVLTOOL) $< ../ld/labels.ld
-	@make -C ../ovls
+	dd if=../bin/0.bin >>../bin/$(ADDR_FW1).bin
+#	$(OVLTOOL) $< ../ld/labels.ld
+#	@make -C ../ovls
 
 all: .subdirs $(OBJS) $(OLIBS) $(SPECIAL_MKTARGETS) $(OIMAGES) $(OBINS) 
 

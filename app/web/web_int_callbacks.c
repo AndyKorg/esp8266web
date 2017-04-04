@@ -61,14 +61,8 @@ extern uint32 dpd_bypass_original;
 extern uint16 phy_freq_offset
 extern uint8 phy_in_most_power;
 extern uint8 rtc_mem_check_fail;
-/*extern uint32 adc_rand_noise;
-extern uint32 dpd_bypass_original;
-extern uint16 phy_freq_offset
-extern uint8 phy_in_most_power;
-extern uint8 rtc_mem_check_fail;
 extern uint8 phy_set_most_tpw_disbg;
 
-extern uint8 phy_set_most_tpw_index; // uint32? */
 extern uint8 phy_set_most_tpw_index; // uint32? */
 extern uint8 phy_in_vdd33_offset;
 
@@ -726,10 +720,9 @@ void ICACHE_FLASH_ATTR web_int_callback(TCP_SERV_CONN *ts_conn, uint8 *cstr)
           cstr+=5;
           ifcmp("rdcfg") Read_WiFi_config(&wificonfig, WIFI_MASK_ALL);
           else ifcmp("newcfg") {
-//        	  tcp_puts("%d", New_WiFi_config(WIFI_MASK_ALL));
-        		  tcp_puts("%d",New_WiFi_config(WIFI_MASK_ALL));
+/*        	  tcp_puts("%d", New_WiFi_config(WIFI_MASK_ALL));
         	  }
-        	  else { */
+        	  else {*/
         		  web_conn->web_disc_cb = (web_func_disc_cb)New_WiFi_config;
         		  web_conn->web_disc_par = WIFI_MASK_ALL;
 //        	  }

@@ -117,7 +117,7 @@ pHttpVar HttpWeather[7]={
 	{"lat", 	vtString,	"%s",		weatherSet.lat,		NULL,		NULL,				NULL, 		0},
 	{"save", 	vtNULL,		NULL,			NULL,			NULL,		weatherSave,		NULL, 		0},
 	{"test", 	vtNULL,		NULL,			NULL,			NULL,		weatherTest,		NULL, 		0},
-	{"current",vtNULL,		NULL,			NULL,		weatherCurrent,	NULL,				NULL, 		0}
+	{"current",	vtNULL,		NULL,			NULL,		weatherCurrent,	NULL,				NULL, 		0}
 };
 //volume_N
 pHttpVar HttpVolumeN[5]={
@@ -273,10 +273,10 @@ uint8 ICACHE_FLASH_ATTR weatherSave(WEB_SRV_CONN* web_con, uint8 *pcmd, uint8 *p
 	noErr += strlen(weatherSet.APIkey);
 	if (!noErr){
 		if (flash_read_cfg(&weatherSet, ID_WEATHER, sizeof(weatherSet)) != sizeof(weatherSet)){
-			weatherSet.APIkey[0] = 0;
+			ets_memset(weatherSet.APIkey, 0, wAPIkeyLen);
 			weatherSet.city = 0;
-			weatherSet.lon[0] = 0;
-			weatherSet.lat[0] = 0;
+			ets_memset(weatherSet.lon, 0, wLonLatLen);
+			ets_memset(weatherSet.lat, 0, wLonLatLen);
 		}
 		return 0;
 	}
@@ -292,6 +292,9 @@ uint8 ICACHE_FLASH_ATTR weatherSave(WEB_SRV_CONN* web_con, uint8 *pcmd, uint8 *p
 }
 
 uint8 ICACHE_FLASH_ATTR weatherTest(WEB_SRV_CONN* web_con, uint8 *pcmd, uint8 *pvar){
+#if (DEBUGSOO>0)
+		os_printf("[AK]test start\n");
+#endif
 	if (weatherResult.state  == WEATHER_STOP){
 		weatherSet.cnt = WE_TYPE_CURRENT;	//Запросить текущую погоду
 		weatherResFunc = NULL;				//По окончании ничего не делать
@@ -303,12 +306,15 @@ uint8 ICACHE_FLASH_ATTR weatherTest(WEB_SRV_CONN* web_con, uint8 *pcmd, uint8 *p
 uint8 ICACHE_FLASH_ATTR weatherCurrent(WEB_SRV_CONN* web_conn, uint8* cstr){
 	if (weatherResult.state == WEATHER_STOP){
 		if (weatherResult.weathers[WE_TYPE_CURRENT].Time){
-			int f = (int)weatherResult.weathers[WE_TYPE_CURRENT].Temperature;
 			#define CURR_TEXT  "today t=%d°C %s"
 			char *tmp = os_zalloc(os_strlen(weatherResult.weathers[WE_TYPE_CURRENT].DescriptUTF8)+os_strlen(CURR_TEXT)+10);
-			os_sprintf_fd(tmp, CURR_TEXT, f, weatherResult.weathers[WE_TYPE_CURRENT].DescriptUTF8);
+			os_sprintf_fd(tmp, CURR_TEXT, weatherResult.weathers[WE_TYPE_CURRENT].Temperature, weatherResult.weathers[WE_TYPE_CURRENT].DescriptUTF8);
 			UTF8toWin1251Cyr(tmp);
 			tcp_puts("%s", tmp);
+			os_free(tmp);
+#if (DEBUGSOO>0)
+		os_printf("[AK]curr out\n");
+#endif
 		}
 		else{
 			tcp_puts("current weather no recived");
@@ -317,6 +323,7 @@ uint8 ICACHE_FLASH_ATTR weatherCurrent(WEB_SRV_CONN* web_conn, uint8* cstr){
 	else{
 		tcp_puts("weather in progress");
 	}
+
 	return 0;
 }
 
@@ -787,7 +794,7 @@ uint8 ICACHE_FLASH_ATTR UartSensorSet(uint8 cmd, uint8* pval, uint8 valLen){
 }
 
 /*
- * Установить значение будильника в модуле
+ * Установить значение будиdльника в модуле
  */
 uint8 ICACHE_FLASH_ATTR UartAlarmSet(uint8 cmd, uint8* pval, uint8 valLen){
 	uint8 Ret = 0;
@@ -831,24 +838,52 @@ uint8 ICACHE_FLASH_ATTR UartNtpStart(uint8 cmd, uint8* pval, uint8 valLen){
 }
 
 ETSTimer weather_repeat_timet;							//Таймер повторного запроса погоды
-void ICACHE_FLASH_ATTR  weatherRepeat(viud){
+void ICACHE_FLASH_ATTR  weatherRepeat(void){
+#if DEBUGSOO>1
+	os_printf("repeat wheather ok\n");
+#endif
 	os_timer_disarm(&weather_repeat_timet);
+	weatherResFunc = NULL;
 	weatherStart();
 }
 //Выввается по окончании процесса получения погоды
 void ICACHE_FLASH_ATTR weatherEndProcess(err_t result){
-	if (result == ERR_OK){
-		if (weatherSet.cnt == WE_TYPE_CURRENT){			//После запроса текущей погоды запрашивается прогноз
-			weatherSet.cnt = WE_TYPE_FORECAST;
+#if DEBUGSOO>1
+	os_printf("wheather end process res=%d cnt=%d\n", result, weatherSet.cnt);
+#endif
+	if (weatherResult.state == WEATHER_STOP){//На всякий случай
+		if (result == ERR_OK){
+			if (weatherSet.cnt == WE_TYPE_CURRENT){			//После запроса текущей погоды запрашивается прогноз
+				weatherSet.cnt = WE_TYPE_FORECAST;
+			}
+			else{
+				os_timer_disarm(&weather_repeat_timet);		//Остановить таймер
+#if DEBUGSOO>1
+	os_printf("wheather STOP\n");
+#endif
+				weatherResFunc = NULL;
+				return;										//Все запрошено
+			}
+			weatherResult.state = WEATHER_IN_PROGRESS;			//Процесс еще не завершен
+			os_timer_disarm(&weather_repeat_timet);				//Повторный запрос
+			os_timer_setfn(&weather_repeat_timet, (os_timer_func_t *) weatherRepeat, NULL);
+			ets_timer_arm_new(&weather_repeat_timet, 1000, OS_TIMER_SIMPLE, OS_TIMER_MS);
 		}
-		else{
-			return;										//Все запрошено
+		else {
+#if DEBUGSOO>1
+	os_printf("wheather end process ERR\n");
+#endif
+			weatherResFunc = NULL;
+			os_timer_disarm(&weather_repeat_timet);		//Остановить таймер
 		}
 	}
-	weatherResult.state = WEATHER_IN_PROGRESS;			//Процесс еще не завершен
-	os_timer_disarm(&weather_repeat_timet);				//Повторный запрос
-	os_timer_setfn(&weather_repeat_timet, (os_timer_func_t *) weatherRepeat, NULL);
-	ets_timer_arm_new(&weather_repeat_timet, 1000, OS_TIMER_SIMPLE, OS_TIMER_MS);
+	else{
+#if DEBUGSOO>1
+	os_printf("NO STOP\n");
+#endif
+		weatherResFunc = NULL;
+		os_timer_disarm(&weather_repeat_timet);		//Остановить таймер
+	}
 }
 /*
  * Использется как односекундный таймер
@@ -977,11 +1012,10 @@ void ICACHE_FLASH_ATTR WeatherGetFromDate(struct sClockValue *needTime, char *te
 				 && (time.Month == needTime->Month)
 				 && (time.Year == needTime->Year)
 				 && (BCDtoInt(time.Hour) >= BCDtoInt((needTime->Hour)))){
-				int t = (int)weatherResult.weathers[i].Temperature;
 				text += os_strlen(text);
-				os_sprintf_fd(text, "%s t %d°C %s.", prefix, t, weatherResult.weathers[i].DescriptUTF8);
-#if DEBUGSOO==1
-					os_printf("find weathr ok\n");
+				os_sprintf_fd(text, "%s t %d°C %s.", prefix, weatherResult.weathers[i].Temperature, weatherResult.weathers[i].DescriptUTF8);
+#if DEBUGSOO>1
+					os_printf("find weather ok\n");
 #endif
 				break;
 			}
@@ -1022,9 +1056,8 @@ uint8 ICACHE_FLASH_ATTR UartTextCustom(uint8 cmd, uint8* pval, uint8 valLen){
 							text += os_strlen(text);
 							os_sprintf_fd(text, "на %02x:%02x", currTime.Hour, currTime.Minute);
 						}
-						int t = (int)weatherResult.weathers[WE_TYPE_CURRENT].Temperature;
 						text += os_strlen(text);
-						os_sprintf_fd(text, " t %d°C %s.", t, weatherResult.weathers[WE_TYPE_CURRENT].DescriptUTF8);
+						os_sprintf_fd(text, " t %d°C %s.", weatherResult.weathers[WE_TYPE_CURRENT].Temperature, weatherResult.weathers[WE_TYPE_CURRENT].DescriptUTF8);
 					}
 
 					uint8 hour = BCDtoInt(Watch.Hour);
@@ -1077,10 +1110,6 @@ uint8 ICACHE_FLASH_ATTR UartTextCustom(uint8 cmd, uint8* pval, uint8 valLen){
 // инициализация
 void ICACHE_FLASH_ATTR ClockWebInit(void){
 
-#if DEBUGSOO==1
-	os_printf("clock web server start\n");
-	os_printf("Watch adr = %x\n", &Watch);
-#endif
 	uint8 i = 0;
 
 	//Имя часов в вебморде
@@ -1108,10 +1137,10 @@ void ICACHE_FLASH_ATTR ClockWebInit(void){
 
 	//Клиент погоды
 	if (flash_read_cfg(&weatherSet, ID_WEATHER, sizeof(weatherSet)) != sizeof(weatherSet)){
-		weatherSet.APIkey[0] = 0;
+		ets_memset(weatherSet.APIkey, 0, wAPIkeyLen);
 		weatherSet.city = 0;
-		weatherSet.lon[0] = 0;
-		weatherSet.lat[0] = 0;
+		ets_memset(weatherSet.lon, 0, wLonLatLen);
+		ets_memset(weatherSet.lat, 0, wLonLatLen);
 		weatherSet.cnt = WEATHER_MAX;
 	}
 
