@@ -90,6 +90,24 @@
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #define USE_PING	//Использовать ping из библиотеки LWIP AndyKorg
 
+//MQTT
+#define MQTT_HOST "mqtt.mydevices.com"
+#define MQTT_PORT 1883
+#define MQTT_USER "MQTT_USER"
+#define MQTT_PASS "MQTT_PASS"
+#define MQTT_CLIENT_ID "MQTT_CLIENT_ID"
+
+#define MQTT_BUF_SIZE		1024
+#define MQTT_KEEPALIVE		120	 /*second*/
+
+#define MQTT_RECONNECT_TIMEOUT 	5	/*second*/
+
+#define DEFAULT_SECURITY	0
+#define QUEUE_BUFFER_SIZE		 		2048
+
+#define PROTOCOL_NAMEv31	/*MQTT version 3.1 compatible with Mosquitto v0.15*/
+//PROTOCOL_NAMEv311			/*MQTT version 3.11 compatible with https://eclipse.org/paho/clients/testing/*/
+
 #endif // _user_config_h_
 
 #if DEBUGSOO > 0

@@ -1142,7 +1142,7 @@ static uint8 ICACHE_FLASH_ATTR _wifi_get_opmode(bool flg)
 	}
 	else wifi_store = &g_ic.g.wifi_store;
 	opmode = wifi_store->wfmode[0];
-	if(opmode > STATIONAP_MODE) opmode = 2;
+	if(opmode > STATIONAP_MODE) opmode = STATIONAP_MODE;
 	if(flg != true) os_free(wifi_store);
 	return opmode;
 }

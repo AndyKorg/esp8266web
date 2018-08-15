@@ -11,7 +11,7 @@
 	#define WIFI_AP_NAME	"ESP8266"
 #endif
 #ifndef WIFI_AP_PASSWORD
-	#define WIFI_AP_PASSWORD	"0123456789"
+	#define WIFI_AP_PASSWORD	"0"
 #endif
 #ifndef WIFI_ST_NAME
 	#define WIFI_ST_NAME	"default"

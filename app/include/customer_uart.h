@@ -51,7 +51,24 @@ typedef struct{					//Ппинятая команда UART
 #define UART_NUM_COUNT	10						//Количество команд и переенных для приема от внешнего модуля
 extern pClockUartCmd ClockUartCmd[UART_NUM_COUNT];//Список команд uart обрабатываемых при приеме данных от часов
 
-void ICACHE_FLASH_ATTR ClockUartInit(void);		//инициализация порта uart
+typedef enum {
+	UART_MODE_CLOCK = 0, 	//Режим связи с часами
+	UART_MODE_MHZ19 = 1 	//Режим связи с даччиком MH-Z19
+} tUartMode;
+
+// MH-Z19
+#define MHZ19_CLK_BAUND		9600	//Скорость обмена с mh-z19
+
+typedef struct{
+	uint16 Result; 			//Результат измерения
+	uint8 IsReady; 			//0 - не готов, 1 - готов
+} tMHZ19Result;
+
+extern tMHZ19Result MHZ19Result;
+
+void ICACHE_FLASH_ATTR mhz19StartMeasurUartTx();
+
+void ICACHE_FLASH_ATTR ClockUartInit(tUartMode mode);		//инициализация порта uart
 void ICACHE_FLASH_ATTR ClockUartTx(uint8 cmd, uint8 *data, uint8 dataLen);//Передача команды на часы
 
 #endif /* __CUSTOMER_UART_H__ */

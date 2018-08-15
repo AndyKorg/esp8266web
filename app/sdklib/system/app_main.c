@@ -421,7 +421,7 @@ void ICACHE_FLASH_ATTR tst_cfg_wifi(void)
 	wifi_softap_set_default_ssid();
 	wifi_station_set_default_hostname(info.st_mac);
 	if(wifi_config->wfmode[0] == 0xff) wifi_config->wfmode[0] = SOFTAP_MODE;
-	else wifi_config->wfmode[0] &= 3;
+	else wifi_config->wfmode[0] &= STATIONAP_MODE;
 	wifi_config->wfmode[1] = 0;
 	if(wifi_config->wfchl >= 14 || wifi_config->wfchl == 0) {
 		wifi_config->wfchl = 1;
@@ -697,6 +697,10 @@ void ICACHE_FLASH_ATTR startup(void)
 	WDT_FEED = WDT_FEED_MAGIC; // WDT
 	//
 	int wfmode = g_ic.g.wifi_store.wfmode[0]; // g_ic.c[0x214] (+532) SDK 1.2.0 // SDK 1.3.0 g_ic.c[472]
+	wfmode = 3;//пока так
+#if DEBUGSOO>0
+	os_printf("WIFI start mode = %u g_ic.c[470] = %u\r\n", wfmode, g_ic.c[470]);
+#endif
 	wifi_mode_set(wfmode);
 	if(wfmode & 1)  wifi_station_start();
 #if DEF_SDK_VERSION >= 1200

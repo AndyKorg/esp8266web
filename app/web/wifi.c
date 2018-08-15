@@ -459,12 +459,17 @@ void ICACHE_FLASH_ATTR print_wifi_config(void) {
  ******************************************************************************/
 uint32 ICACHE_FLASH_ATTR New_WiFi_config(uint32 set_mask) {
 	uint32 uiwset = Cmp_WiFi_chg(&wificonfig) & set_mask;
-#if DEBUGSOO > 1
-	os_printf("WiFi_set(%p)=%p\n", set_mask, uiwset);
-	print_wifi_config();
+#if DEBUGSOO > 0
+	os_printf("WiFi NEW CONFIG (%p)=%p\n", set_mask, uiwset);
+	os_printf("WiFi bits = %p\n", wificonfig.b);
 #endif
 	if (uiwset != 0) uiwset = Set_WiFi(&wificonfig, uiwset);
-	if(set_mask & WIFI_MASK_SAVE) flash_save_cfg(&wificonfig, ID_CFG_WIFI, sizeof(wificonfig));
+	if(set_mask & WIFI_MASK_SAVE){
+		flash_save_cfg(&wificonfig, ID_CFG_WIFI, sizeof(wificonfig));
+#if DEBUGSOO > 0
+	os_printf("WiFi SAVE ONFIG \n");
+#endif
+	}
 	if(set_mask & WIFI_MASK_REBOOT)  system_restart(); // software_reset();
 	return uiwset;
 }
@@ -474,10 +479,19 @@ uint32 ICACHE_FLASH_ATTR New_WiFi_config(uint32 set_mask) {
 void ICACHE_FLASH_ATTR Setup_WiFi(void) {
 	total_scan_infos = 0;
 	wifi_read_fcfg();
-	if (wificonfig.b.mode == 0) Set_default_wificfg(&wificonfig, WIFI_MASK_ALL);
-	Set_WiFi(&wificonfig, Cmp_WiFi_chg(&wificonfig) & (WIFI_MASK_SLEEP|WIFI_MASK_STDHCP|WIFI_MASK_APIPDHCP));
+	if (wificonfig.b.mode == 0){
+#if DEBUGSOO > 0
+	os_printf("Setup WiFi - DEFAULT\r\n");
+#endif
+		Set_default_wificfg(&wificonfig, WIFI_MASK_ALL);
+	}
+#if DEBUGSOO > 0
+	os_printf("Setup WiFi end\r\n");
+#endif
+	Set_WiFi(&wificonfig, Cmp_WiFi_chg(&wificonfig) & (WIFI_MASK_SLEEP|WIFI_MASK_STDHCP|WIFI_MASK_APIPDHCP|WIFI_MASK_MODE));
 	wifi_set_event_handler_cb(wifi_handle_event_cb);
 	return;
+
 }
 /******************************************************************************
  * FunctionName : wifi_save_fcfg
@@ -485,8 +499,9 @@ void ICACHE_FLASH_ATTR Setup_WiFi(void) {
 bool ICACHE_FLASH_ATTR wifi_save_fcfg(uint32 rdmask)
 {
 	if(rdmask) Read_WiFi_config(&wificonfig, rdmask);
-#if DEBUGSOO > 3
-	print_wifi_config();
+#if DEBUGSOO > 0
+	os_printf("WiFi SAVE to CFG, mask=%p\n", rdmask);
+//	print_wifi_config();
 #endif
 	return flash_save_cfg(&wificonfig, ID_CFG_WIFI, sizeof(wificonfig));
 }
@@ -497,13 +512,15 @@ bool ICACHE_FLASH_ATTR wifi_read_fcfg(void)
 {
 	if(flash_read_cfg(&wificonfig, ID_CFG_WIFI, sizeof(wificonfig)) != sizeof(wificonfig)) {
 		Set_default_wificfg(&wificonfig, WIFI_MASK_ALL);
-#if DEBUGSOO > 3
-	print_wifi_config();
+#if DEBUGSOO > 0
+	os_printf("WiFi READ default, mode = %u\r\n", wificonfig.b.mode);
+//	print_wifi_config();
 #endif
 		return false;
 	};
-#if DEBUGSOO > 3
-	print_wifi_config();
+#if DEBUGSOO > 0
+	os_printf("WiFi READ \r\n");
+//	print_wifi_config();
 #endif
 	return true;
 }

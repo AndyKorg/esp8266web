@@ -42,9 +42,13 @@ smdb_ubuf mdb_buf; // TODO: выкинуть т.к. оверлеи не нужн
 #ifdef USE_WEB
 #include "include/clock_web.h"
 #include "../include/customer_uart.h"
+#include "include/mhz19.h"
+#include "include/hc595.h"
+
 extern void web_fini(const uint8 * fname);
 static const uint8 sysinifname[] ICACHE_RODATA_ATTR = "protect/init.ini";
 #endif
+
 
 void ICACHE_FLASH_ATTR init_done_cb(void)
 {
@@ -60,6 +64,10 @@ void ICACHE_FLASH_ATTR init_done_cb(void)
 		break;
 	default:
 		New_WiFi_config(WIFI_MASK_ALL);
+		wifi_save_fcfg(WIFI_MASK_ALL);//Сразу пишем
+#if (DEBUGSOO > 0)
+	os_printf("\r\nNew Config WIFI set\r\n");
+#endif
 		break;
 	}
 #ifdef USE_RS485DRV
@@ -67,9 +75,10 @@ void ICACHE_FLASH_ATTR init_done_cb(void)
 	init_mdbtab();
 #endif
 
-	ClockUartInit();
-	ClockWebInit();
-
+	//ClockUartInit(UART_MODE_MHZ19); //Часы включены,включен mhz19
+	//ClockWebInit();
+	//InitDisplay(); //Инициализация семисегментного индикатора
+	//mhz19Init(); //Инициализация mqtt протокола
 }
 
 extern uint32 _lit4_start[]; // addr start BSS in IRAM
@@ -108,7 +117,7 @@ extern void gdbstub_init(void);
 	system_deep_sleep_set_option(0);
 	system_init_done_cb(init_done_cb);
 
-#if DEBUGSOO > 0
+#if DEBUGSOO > 1
 	if(eraminfo.size > 0) os_printf("Found free IRAM: base: %p, size: %d bytes\n", eraminfo.base,  eraminfo.size);
 	os_printf("System memory:\n");
     system_print_meminfo();

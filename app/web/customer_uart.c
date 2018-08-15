@@ -43,7 +43,84 @@ void uart0_tx(uint8 TxChar)
 }
 
 /*
- * Разбор команды от uart
+ * Получить данные uart и разобрать для mh-z19
+ */
+#define MHZ19_START_BYTE 0xff
+#define MHZ19_SENSOR_NUM 0x01
+#define MHZ19_READ_CMD 0x86
+#define MHZ19_CALIBRATE_ZERO 0x87 	//Calibrate Zero Point (ZERO)
+#define MHZ19_CALIBRATE_SPAN 0x88 	//Calibrate Span Point (SPAN)
+#define MHZ19_CALIBRATE_AUTO 0x79 	//ON/OFF Auto Calibration
+#define MHZ19_DETECT_RANGE 0x99 	//Detection range setting
+
+#define MHZ19_CHECKSUM_READ 0x79
+
+tMHZ19Result MHZ19Result;
+
+void ICACHE_FLASH_ATTR mh_z19_Uart0(void){
+	uint8 RxByte, NumberFifo;
+
+	static uint8 State = 0;
+	static uint16 Result = 0;
+	static uint8 CheckSum = 0;
+
+	ets_intr_lock(); //	ETS_UART_INTR_DISABLE();
+	MEMW();
+	UART0_INT_ENA &= ~ UART_RXFIFO_FULL_INT_ENA; // запретить прерывание по приему символа
+	ets_intr_unlock(); // ETS_UART_INTR_ENABLE();
+
+	os_timer_disarm(&UartLoadTimer);			//Пока отключить таймер загрузки
+
+	MEMW();
+	NumberFifo = ((UART0_STATUS >> UART_RXFIFO_CNT_S) & UART_RXFIFO_CNT); // кол-во уже принятых символов в rx fifo
+
+	while (NumberFifo){
+		MEMW();
+		RxByte = UART0_FIFO;					//Читаем принятый байт
+		if (State == 0){						//Ожидается стартовый байт
+			if (RxByte == MHZ19_START_BYTE)
+				State++;
+		}
+		else if (State == 1){					//Должна быть команда
+			if (RxByte == MHZ19_READ_CMD){		//Команда чтения?
+				CheckSum = RxByte;
+				Result = 0;
+				State++;
+			}
+		}
+		else if ((State >=2) && (State <= 7)){	//Данные
+			if (State == 2)	{
+				Result = (uint16)RxByte << 8;
+			}
+			if (State == 3){
+				Result += (uint16)RxByte;
+			}
+			CheckSum += RxByte;
+			State++;
+		}
+		else if(State == 8){					//Контрольная сумма
+#if (DEBUGSOO>0)
+			os_printf("MHZ19: checksum = %x\r\n", CheckSum);
+#endif
+			if (((0xff - CheckSum) +1) == RxByte){
+				MHZ19Result.Result = Result;
+				MHZ19Result.IsReady = 1;
+			}
+#if (DEBUGSOO>0)
+			else
+				os_printf("MHZ19: bad checksum\r\n");
+#endif
+			State = 0;
+		}
+		MEMW();
+		NumberFifo = ((UART0_STATUS >> UART_RXFIFO_CNT_S) & UART_RXFIFO_CNT); // кол-во уже принятых символов в rx fifo
+	}
+	os_timer_setfn(&UartLoadTimer, (os_timer_func_t *) mh_z19_Uart0, NULL);
+	ets_timer_arm_new(&UartLoadTimer, CLK_UART0_CHECK, OS_TIMER_SIMPLE, OS_TIMER_US);
+}
+
+/*
+ * Разбор команды от uart для часов
  */
 void ICACHE_FLASH_ATTR ParceClockCmdOut(void){
 	uint8 i;
@@ -93,8 +170,9 @@ void ICACHE_FLASH_ATTR UartRxTimeout(void){
 	os_timer_disarm(&UartRxTimeoutTimer);
 }
 
+
 /*
- * Проверить наличие данных в буфере приема uart
+ * Проверить наличие данных в буфере приема uart для часов
  */
 void ICACHE_FLASH_ATTR ClockLoadUart0(void){
 	uint8 RxByte, NumberFifo;
@@ -154,7 +232,7 @@ void ICACHE_FLASH_ATTR ClockLoadUart0(void){
 /*
  * Инициализация UART интерфейса
  */
-void ICACHE_FLASH_ATTR ClockUartInit(void){
+void ICACHE_FLASH_ATTR ClockUartInit(tUartMode mode){
 
 	#define FLOW_CONTROL_OFF	0	//Не контролировать поток uart
 
@@ -167,7 +245,16 @@ void ICACHE_FLASH_ATTR ClockUartInit(void){
 	PERI_IO_SWAP &= ~PERI_IO_UART0_PIN_SWAP;											//Не менять ноги usart
 	update_mux_uart0();
 
-	uart_div_modify(UART0, UART_CLK_FREQ / CLK_BAUND);
+	switch (mode){
+		case UART_MODE_CLOCK:
+			uart_div_modify(UART0, UART_CLK_FREQ / CLK_BAUND);
+			break;
+		case UART_MODE_MHZ19:
+			uart_div_modify(UART0, UART_CLK_FREQ / MHZ19_CLK_BAUND);
+			break;
+		default:
+			break;
+	}
 
 	ets_intr_lock(); 					//	ETS_UART_INTR_DISABLE();
 	MEMW();
@@ -180,12 +267,23 @@ void ICACHE_FLASH_ATTR ClockUartInit(void){
     uart0_set_flow(FLOW_CONTROL_OFF);											//Настроить управление потоком
 
 	os_timer_disarm(&UartLoadTimer);
-	os_timer_setfn(&UartLoadTimer, (os_timer_func_t *)ClockLoadUart0, NULL);
-	ets_timer_arm_new(&UartLoadTimer, CLK_UART0_CHECK, OS_TIMER_SIMPLE, OS_TIMER_US);	//Старт таймера приема данных с rx
-
 	os_timer_disarm(&UartRxParceTimer);										//Таймер разбора команды
-	os_timer_setfn(&UartRxParceTimer, (os_timer_func_t *) ParceClockCmdOut, NULL);
-	ets_timer_arm_new(&UartRxParceTimer, CLK_UART0_PARSE, OS_TIMER_REPEAT, OS_TIMER_MS);
+	switch (mode){
+		case UART_MODE_CLOCK:
+			os_timer_setfn(&UartLoadTimer, (os_timer_func_t *) ClockLoadUart0, NULL);
+			ets_timer_arm_new(&UartLoadTimer, CLK_UART0_CHECK, OS_TIMER_SIMPLE, OS_TIMER_US);	//Старт таймера приема данных с rx
+
+			os_timer_setfn(&UartRxParceTimer, (os_timer_func_t *) ParceClockCmdOut, NULL);
+			ets_timer_arm_new(&UartRxParceTimer, CLK_UART0_PARSE, OS_TIMER_REPEAT, OS_TIMER_MS);
+			break;
+		case UART_MODE_MHZ19:
+			MHZ19Result.IsReady = 0;
+			os_timer_setfn(&UartLoadTimer, (os_timer_func_t *) mh_z19_Uart0, NULL);
+			ets_timer_arm_new(&UartLoadTimer, CLK_UART0_CHECK, OS_TIMER_SIMPLE, OS_TIMER_US);	//Старт таймера приема данных с rx
+			break;
+		default:
+			break;
+	}
 #if DEBUGSOO > 0
 	os_printf("My UART init OK\n");
 #endif
@@ -193,9 +291,25 @@ void ICACHE_FLASH_ATTR ClockUartInit(void){
 }
 
 /*
+ * Начать измерение CO2 для датчика mh-z19b
+ */
+void ICACHE_FLASH_ATTR mhz19StartMeasurUartTx(){
+	uart0_tx(MHZ19_START_BYTE); //0
+	uart0_tx(MHZ19_SENSOR_NUM); //1
+	uart0_tx(MHZ19_READ_CMD);	//2
+	uart0_tx(0x00);				//3
+	uart0_tx(0x00);				//4
+	uart0_tx(0x00);				//5
+	uart0_tx(0x00);				//6
+	uart0_tx(0x00);				//7
+	uart0_tx(MHZ19_CHECKSUM_READ);//8
+}
+
+/*
  * Передать команду на часы. Данные всегда передаются хотя бы в виде одного байта
  */
 void ICACHE_FLASH_ATTR ClockUartTx(uint8 cmd, uint8 *data, uint8 dataLen){
+return;
 	uart0_tx(CMD_CLCK_PILOT1);
 	uart0_tx(CMD_CLCK_PILOT2);
 	uart0_tx(CMD_CLCK_PILOT1);

@@ -139,6 +139,16 @@ class ESPROM:
             # issue reset-to-bootloader:
             # RTS = either CH_PD or nRESET (both active low = chip in reset)
             # DTR = GPIO0 (active low = boot to flasher)
+            self._port.setDTR(True)
+            self._port.setRTS(True)
+            time.sleep(0.05)
+            self._port.setDTR(True)
+            self._port.setRTS(False)
+            time.sleep(0.05)
+            self._port.setRTS(True)
+            time.sleep(0.1)
+            print 'Reseted....'
+
             self._port.setDTR(False)
             self._port.setRTS(True)
             time.sleep(0.05)
@@ -146,6 +156,7 @@ class ESPROM:
             self._port.setRTS(False)
             time.sleep(0.05)
             self._port.setDTR(False)
+            print 'Flash mod on'
 
             self._port.timeout = 0.3  # worst-case latency timer should be 255ms (probably <20ms)
             for _ in xrange(4):

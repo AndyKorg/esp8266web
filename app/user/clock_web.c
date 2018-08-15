@@ -16,7 +16,7 @@
 #include "include/clock_web.h"
 #include "sdk/add_func.h"
 #include "../include/my_esp8266.h"
-
+#include "../include/mqtt.h"
 
 #ifndef USE_PING
 	#error "Set define USE_LWIP_PING for ping ntp in user_config.h\n"
@@ -1158,6 +1158,7 @@ void ICACHE_FLASH_ATTR ClockWebInit(void){
 	for (i=0;i<VOL_TYPE_COUNT;i++){
 		VolumeClock[i].id = i;
 	}
+
 	Watch.Second = 0;
 	Watch.Minute = 0;
 	Watch.Hour = 0;
