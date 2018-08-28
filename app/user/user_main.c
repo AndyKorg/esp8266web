@@ -16,6 +16,8 @@
 #include "tcp2uart.h"
 #include "webfs.h"
 
+#include "hw/gpio_register.h"
+
 #ifdef USE_WEB
 #include "web_srv.h"
 #endif
@@ -44,6 +46,8 @@ smdb_ubuf mdb_buf; // TODO: выкинуть т.к. оверлеи не нужн
 #include "../include/customer_uart.h"
 #include "include/mhz19.h"
 #include "include/hc595.h"
+
+#include "include/i2c_slave.h"
 
 extern void web_fini(const uint8 * fname);
 static const uint8 sysinifname[] ICACHE_RODATA_ATTR = "protect/init.ini";
@@ -83,6 +87,7 @@ void ICACHE_FLASH_ATTR init_done_cb(void)
 
 extern uint32 _lit4_start[]; // addr start BSS in IRAM
 extern uint32 _lit4_end[]; // addr end BSS in IRAM
+
 /******************************************************************************
  * FunctionName : user_init
  * Description  : entry of user application, init user function here
@@ -130,4 +135,5 @@ extern void gdbstub_init(void);
 	os_printf("Set CPU CLK: %u MHz\n", ets_get_cpu_frequency());
 #endif
 
+	i2c_slave_Init(NULL, NULL);
 }
