@@ -8,7 +8,7 @@
 #include "user_interface.h"
 // default:
 #ifndef WIFI_AP_NAME
-	#define WIFI_AP_NAME	"ESP8266"
+	#define WIFI_AP_NAME	"ESP8266_i2c"
 #endif
 #ifndef WIFI_AP_PASSWORD
 	#define WIFI_AP_PASSWORD	"0"
@@ -17,8 +17,7 @@
 	#define WIFI_ST_NAME	"default"
 #endif
 #ifndef WIFI_ST_PASSWORD
-
-	#define WIFI_ST_PASSWORD	"0123456789"
+	#define WIFI_ST_PASSWORD	"fhnfvjy-gtc"
 #endif
 #ifndef WIFI_MODE
 	#define WIFI_MODE STATIONAP_MODE // SOFTAP_MODE // STATION_MODE
@@ -34,7 +33,7 @@
 	#define DEF_WIFI_SLEEP NONE_SLEEP_T // MODEM_SLEEP_T; // LIGHT_SLEEP_T;
 #endif
 #ifndef DEF_WIFI_AUTH_MODE
-	#define DEF_WIFI_AUTH_MODE AUTH_OPEN // AUTH_WPA_PSK, AUTH_WPA2_PSK, AUTH_WPA_WPA2_PSK
+	#define DEF_WIFI_AUTH_MODE AUTH_WPA_WPA2_PSK //AUTH_OPEN // AUTH_WPA_PSK, AUTH_WPA2_PSK, AUTH_WPA_WPA2_PSK
 #endif
 
 #ifndef DEF_ST_RECONNECT_TIME

@@ -79,6 +79,7 @@ void ICACHE_FLASH_ATTR init_done_cb(void)
 	init_mdbtab();
 #endif
 
+	i2c_slave_Init(NULL, NULL);
 	//ClockUartInit(UART_MODE_MHZ19); //Часы включены,включен mhz19
 	//ClockWebInit();
 	//InitDisplay(); //Инициализация семисегментного индикатора
@@ -134,6 +135,4 @@ extern void gdbstub_init(void);
 #if DEBUGSOO > 0
 	os_printf("Set CPU CLK: %u MHz\n", ets_get_cpu_frequency());
 #endif
-
-	i2c_slave_Init(NULL, NULL);
 }
